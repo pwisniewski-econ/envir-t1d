@@ -38,10 +38,17 @@ CRIMES_ARR <- read_feather("data/interim/arr_dynamique/arr_crimes.feather") |>
 
 INCOMING_ARR <- read_feather("data/interim/arr_dynamique/arr_incoming.feather")
   
+WEATHER <- read_feather("data/interim/arr_dynamique/arr_weather.feather")
+
+AIR_QUAL <- read_feather("data/interim/arr_dynamique/arr_airqual.feather")
+
+GES <- read_feather("data/interim/arr_dynamique/arr_greenhouse.feather")
+
 ARR_DATA <- EQUIP_ARR |>
   left_join(RPLS_ARR, by="arr24") |>
   left_join(CRIMES_ARR, by="arr24") |>
   left_join(SIRENE_ARR, by="arr24") |>
+  left_join(GES, by="arr24") |>
   left_join(POPULATION_ARR, by="arr24") |>
   mutate(across(-c(arr24, starts_with("pop_")), ~ .x/pop_tot)) |>
   left_join(INCOMING_ARR, by="arr24") |> 
@@ -49,6 +56,7 @@ ARR_DATA <- EQUIP_ARR |>
   left_join(REVENUS_ARR, by="arr24") |>
   left_join(DIPFORM_ARR, by="arr24") |>
   left_join(DPE_ARR, by="arr24") |>
-  remove_missing()
+  left_join(AIR_QUAL, by="arr24") |>
+  left_join(WEATHER, by="arr24") 
 
 write_feather(as.data.frame(ARR_DATA), "results_building/arr.feather", compression = "zstd")

@@ -10,13 +10,13 @@ DICO_CRIMES <- data.frame(
 )
 
 TABLE_PASSAGE_DF <- read_feather("results_building/t_passage.feather") |>
-  select(code_insee24, arr24) |>
+  select(code_insee24, arr24, bv2022) |>
   unique() |>
   group_by(code_insee24) |>
   filter(row_number()==1) |>
   ungroup()
 
-CRIMES_DF <- read_parquet("crimes23_geo24.parquet") |>
+CRIMES_DF <- read_parquet("data/external/miom-crimes/crimes23_geo24.parquet") |>
   filter(annee>16)
 
 CRIMES_DF <- CRIMES_DF |>
@@ -37,24 +37,18 @@ CRIMES_DF <- CRIMES_DF |>
   left_join(DICO_CRIMES, by = "crimes_desc") |>
   left_join(TABLE_PASSAGE_DF, by = c("code_insee24")) 
 
-DICO <- CRIMES_DFB |> 
-  select(varname = var_crimes, vardesc = crimes_desc, unit = units) |>
-  unique()
-
 #EXPORT READY DATA -----
 CRIMES_ARR <- CRIMES_DF |> 
   group_by(arr24, year, crimes = var_crimes) |>
   summarise(crime_count = sum(crime_count), .groups = "drop") |> 
   pivot_wider(names_from = crimes, values_from = crime_count)
 
-CRIMES_COM <- CRIMES_DF |> 
-  group_by(code_insee24, crimes = var_crimes) |>
+CRIMES_BV22 <- CRIMES_DF |> 
+  group_by(bv2022, year, crimes = var_crimes) |>
   summarise(crime_count = mean(crime_count), .groups = "drop") |> 
   pivot_wider(names_from = crimes, values_from = crime_count)
 
 #EXPORTS ----
-write_feather(as.data.frame(DICO), "data/interim/dictionnaires/dico_crimes.feather", compression = "zstd")
-write_feather(as.data.frame(CRIMES_ARR), "data/interim/arr_dynamique/arr_crimes.feather", compression = "zstd")
-write_feather(as.data.frame(CRIMES_COM), "data/interim/com_statique/com_crimes.feather", compression = "zstd")
-
+write_feather(as.data.frame(CRIMES_ARR), "data/interim/arrondissements/criminality.feather", compression = "zstd")
+write_feather(as.data.frame(CRIMES_BV22), "data/interim/bv2022/criminality.feather", compression = "zstd")
 

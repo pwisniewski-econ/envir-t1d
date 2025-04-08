@@ -1,10 +1,12 @@
 library(data.table)
+library(tidyverse)
+library(arrow)
 
 TABLE_PASSAGE_DF <- read_feather("results_building/t_passage.feather") |>
-  select(code_insee24, arr24) |>
+  select(code_insee24, arr24, bv2022) |>
   unique()
 
-DIPLOMES <- fread("data/external/diplome_forma/DS_RP_DIPLOMES_data.csv") 
+DIPLOMES <- fread("data/external/insee-diplomes/DS_RP_DIPLOMES_data.csv") 
 names(DIPLOMES) <- names(DIPLOMES) |> tolower()
 
 DIP1 <- DIPLOMES |> 
@@ -51,16 +53,20 @@ agreg_educ <- function(DIP1){
   return(DF)
 }
 
-DIPFORM_COM <- agreg_educ(DIP1)
-
 DIP1_ARR <- DIP1 |>
   left_join(TABLE_PASSAGE_DF, by="code_insee24") |>
   group_by(code_insee24 = arr24, sex, educ) |>
-  summarise(obs_value = sum(obs_value), .groups = "drop")
-
-DIPFORM_ARR <- agreg_educ(DIP1_ARR) |>
+  summarise(obs_value = sum(obs_value), .groups = "drop") |>
+  agreg_educ() |>
   rename(arr24 = code_insee24) |>
   filter(nchar(arr24)<4)
 
-write_feather(as.data.frame(DIPFORM_ARR), "data/interim/arr_dynamique/arr_diploma.feather", compression = "zstd")
-write_feather(as.data.frame(DIPFORM_COM), "data/interim/com_statique/com_diploma.feather", compression = "zstd")
+DIP1_BV22 <- DIP1 |>
+  left_join(TABLE_PASSAGE_DF, by="code_insee24") |>
+  group_by(code_insee24 = bv2022, sex, educ) |>
+  summarise(obs_value = sum(obs_value), .groups = "drop") |>
+  agreg_educ() |>
+  rename(bv2022 = code_insee24) 
+
+write_feather(as.data.frame(DIP1_ARR), "data/interim/arrondissements/education.feather", compression = "zstd")
+write_feather(as.data.frame(DIP1_BV22), "data/interim/bv2022/education.feather", compression = "zstd")

@@ -62,12 +62,12 @@ get_dpe <- function(old, lim, export_path){
 }
 
 #GET API -----
-get_dpe(old=T, 1050, "data/external/ademe_dpe/dpe_old/ademe_dpe_old_")
-get_dpe(old=F, 101, "data/external/ademe_dpe/dpe_new/ademe_dpe_new_")
+get_dpe(old=T, 1050, "data/external/ademe-dpe/dpe_old/ademe_dpe_old_")
+get_dpe(old=F, 101, "data/external/ademe-dpe/dpe_new/ademe_dpe_new_")
 
 #JOIN AND EXPORT DATA -----
-new_ls <- list.files("data/external/ademe_dpe/dpe_new/", full.names = T)
-old_ls <- list.files("data/external/ademe_dpe/dpe_old/", full.names = T)
+new_ls <- list.files("data/external/ademe-dpe/dpe_new/", full.names = T)
+old_ls <- list.files("data/external/ademe-dpe/dpe_old/", full.names = T)
 
 new <- lapply(new_ls, fread)
 old <- lapply(old_ls, fread)
@@ -81,4 +81,4 @@ OLD_DF <- old |>
 
 DPE_DF <- rbindlist(list(NEW_DF, OLD_DF), use.names = T)
 
-write_feather(DPE_DF, "data/interim/temp/dpe_all.feather", compression = "zstd")
+write_feather(DPE_DF, "data/interim/_ademe/dpe_all.feather", compression = "zstd")

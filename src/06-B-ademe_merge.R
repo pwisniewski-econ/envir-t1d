@@ -3,17 +3,17 @@ library(data.table)
 library(arrow)
 
 TABLE_PASSAGE_DF <- read_feather("results_building/t_passage.feather") |>
-  select(code_insee24, arr24, code_insee21)
+  select(code_insee24, arr24, bv2022, code_insee21)
 
 ARR2COM <- read_feather("results_building/arr2com.feather") 
 
-old_replaced <- open_dataset("data/interim/temp/dpe_all.feather", format = "arrow") |> 
+old_replaced <- open_dataset("data/interim/_ademe/dpe_all.feather", format = "arrow") |> 
   select(ndperemplac) |> 
   unique() |>
   collect() |>
   filter(ndperemplac!="")
 
-old_building <- open_dataset("data/interim/temp/dpe_all.feather", format = "arrow") |> 
+old_building <- open_dataset("data/interim/_ademe/dpe_all.feather", format = "arrow") |> 
   select(ndpeimmeubleassoci) |>
   unique() |>
   collect() |>
@@ -21,7 +21,7 @@ old_building <- open_dataset("data/interim/temp/dpe_all.feather", format = "arro
 
 old_filter <- data.table(dpe_id = c(old_replaced[[1]], old_building[[1]]), filt = T)
 
-OLD_DPE <- open_dataset("data/interim/temp/dpe_all.feather", format = "arrow") |> 
+OLD_DPE <- open_dataset("data/interim/_ademe/dpe_all.feather", format = "arrow") |> 
   filter(modledpe=="DPE 3CL 2021 méthode logement")|>
   select(
     dpe_id = ndpe,
@@ -99,14 +99,23 @@ group_dpe <- function(OLD_DPE, groupvar){
 
 }
 
-OLD_DPE_COM <- group_dpe(OLD_DPE, "code_insee24") |>
-  filter(!is.na(code_insee24)) |>
-  arrange(code_insee24)
-
 OLD_DPE_ARR <- group_dpe(OLD_DPE, "arr24") |>
   select(arr24, everything()) |>
   filter(nchar(arr24)<4) |>
   arrange(arr24)
 
-write_feather(as.data.frame(OLD_DPE_ARR), "data/interim/arr_dynamique/arr_dpe.feather", compression = "zstd")
-write_feather(as.data.frame(OLD_DPE_COM), "data/interim/com_statique/com_dpe.feather", compression = "zstd")
+OLD_DPE_BV <- group_dpe(OLD_DPE, "bv2022") |>
+  select(bv2022, everything()) |>
+  filter(!is.na(bv2022)) |>
+  arrange(bv2022)
+
+OLD_DPE_DEP <- OLD_DPE |>
+  mutate(dep = substr(arr24, 1, 2)) |>
+  group_dpe("dep") |>
+  select(dep, everything()) |>
+  filter(!is.na(dep)) |>
+  arrange(dep)
+
+write_feather(as.data.frame(OLD_DPE_ARR), "data/interim/arrondissements/ademe_dpe.feather", compression = "zstd")
+write_feather(as.data.frame(OLD_DPE_BV), "data/interim/bv2022/ademe_dpe.feather", compression = "zstd")
+write_feather(as.data.frame(OLD_DPE_DEP), "data/interim/departement/ademe_dpe.feather", compression = "zstd")

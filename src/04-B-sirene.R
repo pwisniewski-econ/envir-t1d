@@ -4,13 +4,13 @@ library(data.table)
 library(arrow)
 
 TABLE_PASSAGE_DF <- read_feather("results_building/t_passage.feather") |>
-  select(code_insee24, arr24) |>
+  select(code_insee24, arr24, bv2022) |>
   unique() 
 
 ARR2COM <- read_feather("results_building/arr2com.feather") |>
   setDT()
 
-SIRENE_DT <- fread(here("data", "external", "sirene", "StockEtablissement_utf8_122024.csv"))[codeCommuneEtablissement!="",
+SIRENE_DT <- fread(here("data", "external", "insee-sirene", "StockEtablissement_utf8_122024.csv"))[codeCommuneEtablissement!="",
    .(
     siren, 
     nic = as.numeric(nic), 
@@ -67,22 +67,22 @@ sirene_type <- function(ape_code){
   return(SIRENE_DF)
 }
 
-ape_ls <- c("56.10C", "93.12Z", "47.73Z", "47.23Z", "47.22Z")
+siren_sum <- function(DATA, level){
+  DATA |>
+    left_join(TABLE_PASSAGE_DF, by = c("insee_code"="code_insee24")) |>
+    group_by({{level}}, year, ape) |>
+    summarise(N = sum(N, na.rm = T)) |>
+    pivot_wider(names_from = ape, values_from = N, names_prefix = "n_ape") |>
+    mutate(across(where(is.numeric), ~if_else(is.na(.x), 0, .x))) 
+}
+
+ape_ls <- c("56.10C", "93.12Z", "56.30Z", "47.73Z", "47.23Z", "47.22Z", "47.11A", "10.71C")
 
 RESULTS <- lapply(ape_ls, sirene_type) |>
   rbindlist() 
 
-RESULTS_COM <- RESULTS |>
-  pivot_wider(names_from = ape, values_from = N, names_prefix = "n_ape") |>
-  mutate(across(where(is.numeric), ~if_else(is.na(.x), 0, .x))) |>
-  select(code_insee24 = insee_code, year, everything())
+RESULTS_ARR <- siren_sum(RESULTS, arr24)
+RESULTS_BV22 <- siren_sum(RESULTS, bv2022)
 
-RESULTS_ARR <- RESULTS |>
-  left_join(TABLE_PASSAGE_DF, by = c("insee_code"="code_insee24")) |>
-  group_by(arr24, year, ape) |>
-  summarise(N = sum(N, na.rm = T)) |>
-  pivot_wider(names_from = ape, values_from = N, names_prefix = "n_ape") |>
-  mutate(across(where(is.numeric), ~if_else(is.na(.x), 0, .x))) 
-
-write_feather(as.data.frame(RESULTS_ARR), "data/interim/arr_dynamique/arr_sirene.feather", compression = "zstd")
-write_feather(as.data.frame(RESULTS_COM), "data/interim/com_statique/com_sirene.feather", compression = "zstd")
+write_feather(as.data.frame(RESULTS_ARR), "data/interim/arrondissements/sirene_1624.feather", compression = "zstd")
+write_feather(as.data.frame(RESULTS_BV22), "data/interim/bv2022/sirene_1624.feather", compression = "zstd")

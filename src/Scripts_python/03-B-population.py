@@ -3,11 +3,17 @@ import pyarrow.feather as feather
 from pathlib import Path
 import re
 
-# --- Chargement de la table de passage ---
+# --- Chargement table de passage ---
 table_passage_df = feather.read_feather("results_building/t_passage.feather")[["code_insee24", "arr24", "bv2022"]].drop_duplicates()
 
-# --- Chargement des données INSEE population ---
-pop_data = pd.read_csv("data/external/insee-population/base-cc-evol-struct-pop-2021.csv.gz", compression="gzip")
+# --- Chargement données INSEE population ---
+pop_data = pd.read_csv(
+    "data/external/insee-population/base-cc-evol-struct-pop-2021.csv.gz",
+    compression="gzip",
+    sep=";",
+    dtype={"CODGEO": str},
+    low_memory=False
+)
 
 # --- Fonction principale d'agrégation ---
 def pop_sum(df, level):

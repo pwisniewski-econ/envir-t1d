@@ -43,5 +43,7 @@ table_passage_df = (
 
 Path("results_building").mkdir(parents=True, exist_ok=True)
 
+table_passage_df = table_passage_df.loc[:, ~table_passage_df.columns.duplicated()]
+
 feather.write_feather(table_passage_df, "results_building/t_passage.feather", compression="zstd")
 feather.write_feather(arr2com, "results_building/arr2com.feather", compression="zstd")

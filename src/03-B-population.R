@@ -16,6 +16,7 @@ pop_sum <- function(DATA, level){
       pop_90p = sum(P21_POP90P, na.rm = T)
     ) |> 
     mutate(
+      pop_0029 = pop_0014 + pop_1529, 
       pop_0044 = pop_0014 + pop_1529 + pop_3044, 
       pop_tot = pop_0044 + pop_4559 + pop_6074 + pop_7589 + pop_90p 
     )
@@ -28,9 +29,23 @@ TABLE_PASSAGE_DF <- read_feather("results_building/t_passage.feather") |>
 
 POP_DATA <- fread("data/external/insee-population/base-cc-evol-struct-pop-2021.csv.gz")
 
-POP_ARR21 <- pop_sum(POP_DATA, arr24)
+filter_pop_sum <- function(DATA, filter="H", level){
+  DATA |> 
+    select(CODGEO, starts_with(paste0("P21_", filter))) |>
+    rename_with(~str_replace(.x, filter, "POP")) |>
+    pop_sum({{level}}) |>
+    select({{level}}, pop_0029, pop_0044, pop_tot) |>
+    rename_with(~str_replace(.x, "pop_", paste0("pop_", tolower(filter))))
+}
+
+POP_ARR21 <- pop_sum(POP_DATA, arr24) |>
+  left_join(filter_pop_sum(POP_DATA, "H", arr24), by="arr24") |>
+  left_join(filter_pop_sum(POP_DATA, "F", arr24), by="arr24")
+
 write_feather(as.data.frame(POP_ARR21), "data/interim/arrondissements/populations_2021.feather", compression = "zstd")
 
-POP_BV21 <- pop_sum(POP_DATA, bv2022)
-write_feather(as.data.frame(POP_BV21), "data/interim/bv2022/populations_2021.feather", compression = "zstd")
+POP_BV21 <- pop_sum(POP_DATA, bv2022) |>
+  left_join(filter_pop_sum(POP_DATA, "H", bv2022), by="bv2022") |>
+  left_join(filter_pop_sum(POP_DATA, "F", bv2022), by="bv2022")
 
+write_feather(as.data.frame(POP_BV21), "data/interim/bv2022/populations_2021.feather", compression = "zstd")

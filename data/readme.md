@@ -26,7 +26,6 @@ All external data sources are prefixed by the name of the data producer. We addi
 |16|msp-eau||
 |17|poste-codes||
 
-: External Data Sources {#tbl-letters}
 
 ## Data Dictionary 
 
@@ -182,12 +181,3 @@ All external data sources are prefixed by the name of the data producer. We addi
 |16|water_ph||
 |16|water_so4||
 
-: Dictionnary {#tbl-arr}
-
-### SIRENE 
-
-### DPE 
-
-### Weather
-
-### ...

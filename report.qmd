@@ -804,6 +804,57 @@ No other variables reach our choosen level of statistical significance (10%). No
 
 ## Note on Feature Selection
 
+\begin{longtable}{@{}p{3.5cm}>{\centering\arraybackslash}p{1.1cm}p{5.1cm}p{5.1cm}@{}}
+\toprule
+\textbf{Name} & \textbf{Type} & \textbf{Meaning} & \textbf{Justification / Hypothesis} \\
+\midrule
+\endfirsthead
+
+\toprule
+\textbf{Name} & \textbf{Type} & \textbf{Meaning} & \textbf{Justification / Hypothesis} \\
+\midrule
+\endhead
+
+\midrule
+\multicolumn{4}{r}{Continued on next page} \\
+\midrule
+\endfoot
+
+\bottomrule
+\endlastfoot
+
+PC1 & C & First principal component of the PCA on SES variables & Used to C for SES \\
+PC2 & C & Second principal component of the PCA on SES variables & Used to C for SES \\
+PC3 & C & Third principal component of the PCA on SES variables & Used to C for SES \\
+tm\_summer & T & Average temperature during summer 2023 & Ts for physiological stress from heat exposure \\
+tm\_winter & T & Average temperature during winter 2023 & Ts for influence of moderate cold exposure \\
+somo35\_mean & T & Annual mean of SOMO35 (ozone exposure) & Ts air quality impact \\
+pm10\_mean\_concentration & T & Mean PM10 concentration (µg/m\textsuperscript{3}) & Ts air quality impact \\
+o3\_mean\_concentration & T & Mean O\textsubscript{3} concentration (µg/m\textsuperscript{3}) & Ts air quality impact \\
+no2\_mean\_concentration & T & Mean NO\textsubscript{2} concentration (µg/m\textsuperscript{3}) & Ts air quality impact \\
+ges\_resid & T & Residential greenhouse gas emissions & Proxy for environmental quality \\
+water\_no3 & T & NO\textsubscript{3} concentration in drinking water & Cled by \textit{prop\_robinet}; Ts water quality \\
+water\_ph & T & pH level of drinking water & Cled by \textit{prop\_robinet}; Ts water quality \\
+n\_equip\_d2 & C & Medical/paramedical professionals (private) & Potential influence on early T1D detection \\
+n\_equip\_a1 & C & Local public services & Socio-environmental infrastructure C \\
+n\_equip\_c1 & C & Primary education institutions & SES / public resource C \\
+n\_equip\_c2 & C & Lower secondary education institutions & SES / public resource C \\
+n\_ape5610c & T & Fast food outlets & Ts hypothesis of diet-related risk for T1D \\
+n\_ape9312z & T & Sports clubs & Ts access to physical activity \\
+n\_ape4722z & T & Meat retailers & Ts dietary access hypothesis \\
+n\_ape4723z & T & Fishmongers & Linked to vitamin D intake \\
+coups & T & Assault complaints per inhabitant & Proxy for ambient stress and safety \\
+ac\_prop & T & Share of households with AC & Proxy for heatwave protection \\
+prop\_robinet & C & Proportion drinking tap vs bottled water & Used to interpret water-related quality variables \\
+diag\_vitamin\_d & T & Diagnosed vitamin D deficiency & Vitamin D and T1D link (with reverse causality caution) \\
+diag\_calcium & T & Diagnosed calcium deficiency & Nutritional deficiency hypothesis (reverse causality risk) \\
+diag\_family & T & Indicator of family-related stress & Psychosocial stress hypothesis \\
+diag\_other\_minerals & T & Diagnosed mineral deficiency & General mineral deficiency and T1D risk \\
+diag\_tabacco & T & Indicator of tobacco use & Lifestyle-related trigger for T1D onset \\
+diag\_vitamin\_b9 & T & Diagnosed vitamin B9 deficiency & Nutritional deficiency hypothesis \\
+diag\_vitamin\_b12 & T & Diagnosed vitamin B12 deficiency & Nutritional deficiency hypothesis \\
+\end{longtable}
+
 \newpage 
 
 ## Double ML Presentation

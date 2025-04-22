@@ -286,7 +286,7 @@ Selecting variables for the primary model presented a significant challenge due 
 
 Employing variable selection methods driven by relationships within the dataset itself compromises subsequent statistical inference. Most notably, it renders p-values unreliable for controlling the risk of Type I errors. Furthermore, automatic selection introduces interpretative difficulties. In observational settings often characterized by unobserved heterogeneity, it becomes challenging to discern the substantive reasons for a variable's inclusion beyond its predictive performance or simple correlation with the outcome (here, T1D).
 
-Therefore, we adopted a manual selection approach. This allows us to incorporate variables based on pre-defined hypotheses regarding their potential influence, informed by theoretical considerations from the literature, results from our exploratory PCA (which excluded T1D-related variables), and descriptive statistics concerning seasonality and associated diagnoses. For transparency, the justification for each chosen variable is provided in the annex to this report.
+Therefore, we adopted a manual selection approach. This allows us to incorporate variables based on pre-defined hypotheses regarding their potential influence, informed by theoretical considerations from the literature, results from our exploratory PCA (which excluded T1D-related variables), and descriptive statistics concerning seasonality and associated diagnoses. For transparency, the justification for each chosen variable is provided in the annex to this report. We add or remove certains controls after modelling to evaluate sensitivity of our estimates. 
 
 Our primary analysis employs Poisson and Negative Binomial regression models to explain the number of "new cases" observed at various geographical levels. To address inherent concerns about the ecological fallacy, where aggregate-level associations may not accurately reflect individual-level risks, we leverage data across different geographic levels and conduct heterogeneity analyses within selected sub-populations. Finding consistent results across these different levels and groups strengthens the evidence for the robustness of inference.
 
@@ -359,12 +359,18 @@ def build_table(
     df: pd.DataFrame,
     include_pval: bool = False,
     midrule_after: int = 15,
-    exclude_pattern: str = None
+    exclude_pattern: str = None,
+    pattern_keep: str = r'arr24|bv2022$',
+    model_stat_names: list = ['dispersion', 'df', 'pseudo_r2', 'aic', 'description'],
+    expo: bool = True,
 ) -> str:
 
     data = df.copy()
 
     # Format beta column
+    if expo: 
+        data['beta'] = np.exp(df['beta'])
+
     data['beta'] = data.apply(lambda row: format_beta(row['beta'], row['pval']), axis=1)
 
     # Conditionally format or drop pval
@@ -400,7 +406,7 @@ def build_table(
         coef.loc[coef['metric'] != 'beta', 'variable'] = ''
 
     # Keep only relevant columns
-    pattern = r'arr24|bv2022$'
+    pattern = pattern_keep
     mask = coef.columns.str.contains(pattern, regex=True)
     cols_keep = ['variable'] + coef.columns[mask].tolist()
     coef = coef[cols_keep].fillna('-')
@@ -408,7 +414,7 @@ def build_table(
     # Model summary table
     model_stats = (
         df[df['description'].str.contains(pattern, regex=True)]
-        [['dispersion', 'df', 'pseudo_r2', 'aic', 'description']]
+        [model_stat_names]
         .drop_duplicates()
         .melt(id_vars='description', var_name='variable', value_name='value')
     )
@@ -461,13 +467,15 @@ def build_table(
 
 # Results and Comments
 
-As previously mentioned, we employ the widely used Poisson regression model to analyze the number of "incident" cases within specific French geographic units, the *bassins de vie 2022* and *arrondissements administratifs*. This model assumes that the case count $Y_i$ in unit $i$, conditional on a set of covariates $X_i$, follows a Poisson distribution: $Y_i | X_i \sim \mathcal{P}(\lambda_i)$. Model parameters are estimated using maximum likelihood estimation. The core of the model links the expected number of cases to covariates and population size through the conditional mean:
+As previously mentioned, we employ the widely used Poisson regression model to analyze the number of "incident" cases within specific French geographic units, the *bassins de vie 2022* (BV) and *arrondissements administratifs*. This model assumes that the case count $Y_i$ in unit $i$, conditional on a set of covariates $X_i$, follows a Poisson distribution: $Y_i | X_i \sim \mathcal{P}(\lambda_i)$. Model parameters are estimated using maximum likelihood estimation. The core of the model links the expected number of cases to covariates and population size through the conditional mean:
 $$E[Y_i | \mathbf{X}_i, \text{pop}_i] = \lambda_i = \text{pop}_i\cdot\exp(\mathbf{X}_i^T \boldsymbol{\beta})$$
 Here, $\text{pop}_i$ denotes the reference population under 30 years of age within the geographic unit $i$, serving as an offset that scales incidence risk to the relevant population size. The vector $\mathbf{X}_i$ includes both the control variables and variables of interest defined previously.
 
 A key assumption of the Poisson model is the equality of its conditional mean and variance: $E[Y_i \mid \mathbf{X}_i] = \text{Var}(Y_i \mid \mathbf{X}_i) = \lambda_i$. However, our data exhibit evidence of a slight overdispersion (variance exceeding the mean), with calculated dispersion indices ranging from 1.2 to 1.5. To account for this, we also estimate a Negative Binomial (NB) regression model. The NB model typically retains the same structure for the conditional mean $\mu_i$ as the Poisson model but incorporates an additional dispersion parameter $\alpha$ to allow for greater variance:
 $$ \mu_i = \text{pop}_i \cdot \exp(\mathbf{X}_i \boldsymbol{\beta}) \ \ \ \text{Var}(Y_i | \mathbf{X}_i) = \mu_i + \alpha \mu_i^2$$
-This approach offers greater flexibility in modeling the variance compared to the standard Poisson model. While estimating the NB model can sometimes lead to instability, particularly with smaller sample sizes, it directly addresses the issue of overdispersion. For comparison, estimates from both the Poisson and NB models are presented in the following table, where (1) is the NB model at the arrondissement level, (2) is the NB model at the bv2022 level, (3) is a Poisson model at the arrondissement level and finally, (4) is a Poisson model at the bv2022 level.
+This approach offers greater flexibility in modeling the variance compared to the standard Poisson model. While estimating the NB model can sometimes lead to instability, particularly with smaller sample sizes, it directly addresses the issue of overdispersion. For comparison, estimates from both the Poisson and NB models are presented in the following table, where (1) is the NB model at the arrondissement level, (2) is the NB model at the BV level, (3) is a Poisson model at the arrondissement level and finally, (4) is a Poisson model at the BV level.
+
+## Main Poisson and NB
 
 ```{python}
 #| results: asis
@@ -476,15 +484,38 @@ This approach offers greater flexibility in modeling the variance compared to th
 
 print(build_table(
         MAIN_RESULTS[MAIN_RESULTS['description'].str.endswith(("arr24", "bv2022"))],
-        include_pval=False,
+        include_pval=True,
         midrule_after=26,
         exclude_pattern=default_pattern
     ))
 ```
 
-Full table in appendix
+The regression coefficients are reported as Incidence Rate Ratios (IRR), calculated $\exp(\beta_x)$. An IRR greater than 1 indicates a positive association with the incidence rate, while an IRR less than 1 indicates a negative association. Given the limited sample size, we consider three significance levels: 0.1, 0.05, and 0.01, denoted by one to three stars, respectively. Full regression outputs are available in Annex A.1.
 
-\newpage
+### Socioeconomic Principal Components
+
+At the arrondissement level, PC3, which we interpret as capturing predominantly low to middle education, is statistically significant and associated with an increase in incidence rates. At the BV level, PC1, representing high education and high income, is significant and negatively associated with incidence. Also at the BV level, PC, defined as middle education with high first decile income, is significant (but less than PC1) and negatively associated with incidence. These support our hypothesis that the correlations between income and incidence observed in prior research likely reflect strongly consumption habits (which are closely tied to education), rather than living conditions per se, which are more directly influenced by income alone.
+
+### Health Indicators and Lifestyle Factors
+
+A few variables consistently stand out. The percentage of the hospital population diagnosed with tobacco addiction is significant and positively associated with incidence rates across both BV and arrondissement levels, and in both Poisson and Negative Binomial models.
+
+The number of gyms per 1,000 inhabitants is significant at the BV level. While not statistically significant at the arrondissement level, the similarity in coefficient magnitude suggests this is more likely a matter of limited statistical power than a true absence of effect.
+
+Vitamin D and calcium deficiencies exhibit alternating significance across arrondissement and BV levels. Removing one of the two tends to decrease the p-value of the other. However, it is important to note that diagnostic hospital data on nutriment deficiencies may not be reliable a proxy for population-level nutritional status, as they may also capture prevalent local conditions. To better evaluate the vitamin D hypothesis, we will rely on non-diagnostic variables in a subsequent fixed effects model.
+
+### Environmental and Contextual Variables
+
+Butcheries are significant only at the arrondissement level. Interestingly, when this variable is excluded from the model, the number of fast food establishments becomes significant, suggesting some overlapping or substitutive influence on dietary exposure. Assault and battery rates are also significant, but only at the arrondissement level.
+
+$\text{NO}_2$ concentrations exhibit a small but significant negative effect on incidence. This finding is counterintuitive and appears sensitive to the inclusion of control variables. Therefore, we refrain from drawing strong conclusions from this coefficient.
+
+### Water Quality and Climate 
+Variables relating to water quality are not significant with the inclusion of an interaction term with tap water consumption. The proportion of homes with air conditioning (AC) is not always independently significant. However, when interacted with average summer temperatures, AC appears to moderate the positive effect of higher temperatures on incidence. Unfortunately, we are unable to test this interaction at the BV2022 level due to the lack of reliable weather data.
+
+## Poisson Heterogeneity by Sex
+
+To complement the previous estimates and enable comparisons with existing literature, we analyze the heterogeneity of effects by sex. This analysis is based on a restricted sample consisting only of incident patients. As a result, the estimates may be noisier, particularly because some geographic units report zero incident cases. For this reason, we limit the heterogeneous analysis to the arrondissement level. Specifically, Model (1) is a Negative Binomial (NB) regression for females, Model (2) is an NB model for males, Model (3) is a Poisson model for females, and Model (4) is a Poisson model for males.
 
 ```{python}
 #| results: asis
@@ -499,7 +530,31 @@ print(build_table(
     ))
 ```
 
-\newpage
+\newpage 
+
+Consistent with prior literature, tobacco addiction is significantly associated with increased incidence only among males. The effect is not statistically significant in the female-only sample.
+
+A similar pattern of heterogeneity is observed with the presence of butchers, which appears to affect men more than women. One possible explanation is that males may drive demand for butchers to a greater extent than females, though this remains speculative.
+
+The principal component PC3, previously characterized as reflecting lower to middle education, is also more strongly associated with increased incidence among males. This may suggest lower-quality consumption habits among less-educated men.
+
+Finally, the number of assaults per 1,000 inhabitants is positively associated with incidence for both sexes, with a slightly stronger effect observed among females. This may reflect the well-documented phenomenon that feelings of insecurity are more prevalent among women than men [REFERENCE].
+  
+\newpage 
+
+## Poisson Fixed Effects
+
+### Motivation
+
+As previously mentioned, drawing inference from observational data is inherently challenging, especially in the context of ecological inference. Our estimates can vary substantially depending on the inclusion and specification of control variables. For some covariates, we can mitigate this issue by leveraging a time dimension through the use of fixed effects. Fixed effects models are a powerful tool in causal inference, as they absorb all time-invariant unobserved heterogeneity across observational units.
+
+Given the limitations of our data, which includes only one year of observations, only a few variables are suitable for this approach, most notably, monthly weather data. We deliberately avoid using diagnostic hospital data in fixed effects models, as these are subject to seasonal fluctuations in healthcare utilization, potentially introducing population bias. In contrast, weather data should be exogenous and not influenced by such factors. To ensure adequate variability and avoid sparsity (i.e., a high frequency of zeros), we conduct this analysis at the *department* level. Fixed effects estimates are computed using an IRLS-based algorithm with fixed-point acceleration (REFERENCE: FENLnm).
+
+The key objective of this FE analysis is to test the vitamin D hypothesis regarding Type 1 Diabetes (T1D) incidence. Since sunlight exposure is crucial for human vitamin D synthesis [REFERENCE_A; REFERENCE_B], and vitamin D levels typically decline in winter due to limited sun exposure and storage capacity [REFERENCE_C], we investigate whether increased sunshine is associated with reduced T1D incidence, controlling for other meteorological factors.
+
+### Sunshine Effects 
+
+Our findings support this hypothesis. Controlling for department fixed effects and other monthly weather variables, the number of sunny days per month shows a statistically significant negative association with the T1D incidence rate (IRR = 0.962, p < 0.01). Ceteris paribus, an additional sunny day per month is associated with approximately a 3.8% decrease in the monthly T1D incidence rate within a department. We also tested the inclusion of one-month lags for the weather variables. While the effects appear stronger, they are slightly noisier, due to our short time series. Each additional lag reducing the number of usable observations per department by one.
 
 ```{python}
 #| fig-cap: Poisson Fixed-Effects, Consumption Heterogeneity, Clustered SE
@@ -521,11 +576,11 @@ plt.rcParams['font.family'] = 'Times New Roman'
 plt.rcParams['figure.dpi'] = 300
 
 # 2. Read the CSV
-df = pd.read_csv("results_analysis/poisson-fixed_effects.csv")
+POISSON_FE = pd.read_csv("results_analysis/poisson-fixed_effects.csv")
 
 # 3. Filter, extract & recode columns
-df = (
-    df[df['description'].str.contains("fixed-poisson")]
+POISSON_FE = (
+    POISSON_FE[POISSON_FE['description'].str.contains("fixed-poisson")]
       .assign(
          # extract the part after the last dash
          description = lambda d: d['description'].str.extract(r'([^-]+)$')[0]
@@ -545,20 +600,22 @@ df = (
       )
 )
 
+POISSON_FE['beta'] = np.exp(POISSON_FE['beta'])
+
 # 4. Compute 95% CI bounds
-df['conf_low']  = df['beta'] - 1.96 * df['std']
-df['conf_high'] = df['beta'] + 1.96 * df['std']
+POISSON_FE['conf_low']  = POISSON_FE['beta'] - 1.96 * POISSON_FE['std']
+POISSON_FE['conf_high'] = POISSON_FE['beta'] + 1.96 * POISSON_FE['std']
 
 
 # 5. Build the plot
 p = (
-    ggplot(df, aes(x='beta', y='variable', color='description'))
+    ggplot(POISSON_FE, aes(x='beta', y='variable', color='description'))
       + geom_point(size=1.5)
       + geom_errorbarh(
           aes(xmin='conf_low', xmax='conf_high'),
           height=0.35, size=0.95
         )
-      + geom_vline(xintercept=0, linetype='dashed', size=1)
+      + geom_vline(xintercept=1, linetype='dashed', size=1)
       + facet_wrap('~description', ncol=1)
       + theme_minimal(base_size=14)
       + theme(
@@ -574,7 +631,75 @@ p = (
 p
 ```
 
+### Sunshine Heterogeneity
+
+To further strengthen our interpretation, we assess whether the effect of sunshine is more pronounced in regions with lower dietary intake of vitamin D. Such a pattern would be consistent with the idea that sunlight captures vitamin D in our population. Our results indicate that in low-consumption regions, the negative effect of sunlight on T1D incidence is slightly stronger, though also noisier.[^1] Nevertheless, the effect remains statistically significant in both high- and low-consumption regions, lending support to the vitamin D interpretation.
+
+[^1]: Note that the difference is not *statistcally* significant
+
+Model dispersion is limited, indicating that a Poisson specification is appropriate. The model’s pseudo-$R^2$ ranges from 33% to nearly 50%, largely due to the inclusion of fixed effects. Detailed regression tables can be found in Annex A.4.
+
+\newpage 
+
+### Sunshine and Vitamin D
+As a final validation step, we test whether the noisy vitamin D deficiency variable from Section 5.1 is indeed related to sunlight exposure and thus serves as a proxy for population-level deficiency. We estimate a fixed effects linear model:
+$$Y_{it} = \alpha_i + \text{sunshine}_{it} + \text{visits}_{it} + \varepsilon_{it} $$
+Where the dependent variable $Y_{it}$ is the share of hospital patients diagnosed with vitamin D deficiency in department $i$ at month $t$. We explain this $Y_{it}$ by a department fixed effect $\alpha_i$, the number of sunny days and where we attempt to controll for seasonality using the number of monthly hopistal visits in the department.
+
+```{python}
+#| results: asis
+#| output: asis
+#| tbl-cap: "Sunshine and Vitamin D"
+
+VITD_WEATHER = pd.read_csv("results_analysis/poisson-fixed_effects.csv")
+
+VITD_WEATHER = (
+    VITD_WEATHER[VITD_WEATHER['description'].str.contains("corr")]
+        .assign(
+            variable = lambda d: d['variable'].replace({
+                "inst":  "Sunshine (days)",
+                "visit": "N. Hospital Visits"
+            })
+        )
+        .rename(columns={'nobs': 'N. Observations'})
+)
+
+print(build_table(
+        VITD_WEATHER,
+        include_pval=False,
+        midrule_after=13,
+        pattern_keep = r'inst$',
+        model_stat_names=['N. Observations', 'pseudo_r2', 'description'], 
+        expo=False
+    ))
+```
+
+We find that ceteris paribus, an additional 24 hours of sunshine per month in a department is associated with a 0.015 percentage point *decrease* in vitamin D deficiency, in relative term equivalent to a 2.7% relative decrease. The model's $R^2$ is 92.5%, with roughly 10% of the variation explained by time-varying covariates. This supports the interpretation that hospital-diagnosed vitamin D deficiency plausibly reflects true population-level variation.
+
+### Remark
+
+While these fixed effects analyses significantly strengthen the evidence by controlling for time-invariant confounders, we maintain caution regarding causal claims based solely on this observational study. Establishing a definitive causal link between vitamin D (proxied by sunshine) and T1D would require further research, ideally with longer time series allowing for more extensive time-varying controls. Furthermore, these results represent ecological associations at the department level, which do not automatically translate to individual-level causal effects.
+
 \newpage
+
+## Double Debiased ML 
+
+### Motivation 
+
+While fixed effects models allow leveraging the time dimension for certain variables, they cannot be applied to time-invariant characteristics or when panel data is unsuseable for specific factors of interest, such as tobacco addiction patterns derived from hospital data. To estimate the potential causal effect of such variables, we turn to Double Machine Learning (DML). Conceptually, DML, like matching methods, aims to compare observational units that are very similar across a range of characteristics (X) but differ in their level of a specific "treatment" variable (D). We employ DML within a partially linear framework, assuming the outcome (Y, T1D incidence) and treatment (D) models can be represented as:
+$$Y = D \theta_0 + g_0(X) + \zeta, \quad \text{where } E[\zeta | D, X] = 0$$
+$$D = m_0(X) + V, \quad \text{where } E[V | X] = 0$$
+Where, $Y$ is the outcome variable, $D$ is the treatment variable, $\theta_0$ is the target causal parameter, $X$ are the confounding variables, $g_0(X) = E[Y | X]$ and $m_0(X) = E[D | X]$ are unknown nuisance functions, $\zeta$ and $V$ are error terms.
+
+A key advantage of DML is its use of machine learning (ML) techniques to flexibly estimate nuisance functions without strong parametric assumptions, which also aids in handling high-dimensional X (variable selection). We utilized Random Forests as the ML learner for both, chosen for its flexibility in capturing complex relationships and its implicit variable selection. This data-driven estimation of nuisance components avoids injecting strong prior beliefs into that part of the model. Further details on the DML methodology are provided in Annex A.Z.
+
+This DML analysis was applied to several variables identified as potentially important from the previous models. Due to computational constraints these models were estimated only at the arrondissement level.[^virtual] Checks related to the common support assumption and the predictive performance of the first-stage models are discussed in Annex A.5 and were found to be broadly acceptable.
+
+[^virtual]: The analysis was performed on a virtual machine with limited resources (2 vCPUs, no GPU), preventing parallelization of cross-validation or extensive hyperparameter tuning for the Random Forest learners.
+
+\newpage
+
+### Results
 
 ```{python}
 #| fig-cap: DDML Estimates, Multiple Variables
@@ -586,6 +711,10 @@ df = (
     pl.read_csv("results_analysis/dml-results.csv")
       .filter(pl.col("desc") != "dml-n_ape4722z")
 )
+
+rename_map['diag_tabacco'] = 'Share w/ Tabacco Addic. (T)'
+rename_map['tabacco-female'] = 'Share w/ Tabacco Addic. (F)'
+rename_map['tabacco-male'] = 'Share w/ Tabacco Addic. (M)'
 
 mapping_df = pl.DataFrame({
     "code": list(rename_map.keys()),
@@ -633,6 +762,12 @@ p = (
 p
 ```
 
+
+\vspace{-0.3cm}  We find a clear and statistically significant positive effect of the share of the hospital population diagnosed with tobacco addiction on T1D incidence, significant at the 1% level.[^tabacco] When analyzing by sex, the estimates become noisier: the effect remains significant for males (at the 10% level) but is not significant for females. While we cannot interpret tobacco use as an individual-level risk factor, due to the risk of ecological fallacy, the robustness of this finding across multiple models and subpopulations supports the conclusion that tobacco consumption at the population level increases the risk of T1D, particularly among males. Additionally, the number of fast food establishments is marginally significant, falling just below the 5% threshold. This result contributes to the growing body of evidence suggesting that unhealthy consumption behaviors within a population are associated with increased T1D incidence.
+
+No other variables reach our choosen level of statistical significance (10%). Notably, the previously observed counterintuitive negative association with NO$_2$ concentrations is no longer statistically significant.  Other environmental variables, such as insecurity, proxied by the number of assaults, are also not statistically significant. However, we did not exclude other crime-related variables from the model, this is a limitation of our use of DML. For some variables we don't have clear enough causal relationship to test and as such we may suffer from collider bias.
+
+[^tabacco]: (T): Total Population; (M): Males; (F): Females
 \newpage 
 
 # Conclusion
@@ -669,6 +804,26 @@ print(build_table(
 ))
 
 #print("\\begingroup\\center\\footnotesize\n" + build_table(MAIN_RESULTS, include_pval=True, midrule_after=30) + "\n\\endgroup")
+```
+
+\newpage 
+
+## Poisson FE Table
+
+```{python}
+#| results: asis
+#| output: asis
+
+POISSON_FE = POISSON_FE.rename(columns={'nobs': 'N. Observations'})
+
+print(build_table(
+        POISSON_FE,
+        include_pval=True,
+        midrule_after=23,
+        pattern_keep = r'Full|D$',
+        model_stat_names=['dispersion', 'N. Observations', 'pseudo_r2', 'description'], 
+        expo=False
+    ))
 ```
 
 \newpage 

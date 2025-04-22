@@ -53,6 +53,12 @@ from sklearn.impute import SimpleImputer
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+import geopandas as gpd
+from plotnine import *
+from mizani.palettes import hue_pal
 ```
 
 \clearpage
@@ -112,187 +118,160 @@ Despite the associations found in these studies, there is no definitive evidence
 \newpage
 
 # Data Presentation
+```{python}
+total_t1d_e101 = pd.read_csv("results_analysis/total_t1d_e101.csv")
+total_t1d = pd.read_csv("results_analysis/total_t1d.csv")
+t1_visits = pd.read_csv("results_analysis/t1d_visits_ts.csv")
+t1d_associations = pd.read_csv("results_analysis/t1d_associations.csv")
+```
 
 ## Data provided by Sanofi 
  
 ## Complementary Data
 
 To enrich the dataset provided by Sanofi, we searched for additional open-source data. We focused on the following databases:
-1. Météo France database: selected based on findings from existing studies suggesting a potential link between UV exposure and disease incidence.
-2. SIRENE database: used to complement the equipment dataset provided by the Sanofi teams.
-3. DPE database: incorporated as an additional source to enhance the existing datasets.
-4. INSEE database : used to get the influence of the mobility of persons between localities.
-5. GitHub repository gregoredavid/france-geojson: a collection of .geojson files representing French communes, districts, and departments, used for map rendering and geolocation purposes.
-6. Base INCA 3 : used for 
+ 
+- Météo France database: selected based on findings from existing studies suggesting a potential link between UV exposure and disease incidence.
+- SIRENE database: used to complement the equipment dataset provided by the Sanofi teams.
+- DPE database: incorporated as an additional source to enhance the existing datasets.
+- INSEE database : used to get the influence of the mobility of persons between localities.
+- GitHub repository gregoredavid/france-geojson: a collection of .geojson files representing French communes, districts, and departments, used for map rendering and geolocation purposes.
+- Base INCA 3 : used for food habits and consumption at regional levels. 
 
 
 ## Medical Data from PMSI
 
+### Population of interests
 
+Our primary objective was to isolate the target population from the 2023 PMSI Dataset. Given our main goal of identifying triggering or protective factors for type 1 diabetes, we aimed to focus on the incident population of 2023. To achieve this, we applied the following filters: we searched for individuals diagnosed with DP = E101 or DR = E10, indicating patients who were hospitalized with acidosis.
 
-
-```{python}
-df_arr_full = pd.read_feather("results_building/arrondissement-full.feather")
-df_dep_full = pd.read_feather("results_building/dep-full.feather")
-
-def make_pca(
-    df: pd.DataFrame,
-    col_for_PCA: list = None,
-    col_to_remove: list = None,
-    n_components: int = 10
-    ):
-
-  """
-  Effectue une PCA sur un dataframe
-  Si col_for_PCA est renseigné, la PCA est effectué sur ces colonnes,
-  Si col_to_remove est renseigné, ces colonnes sont supprimées du dataframe et la
-  PCA est faite sur le DataFrame
-
-  Renvoie:
-  - df_pca: DataFrame contenant les composantes principales
-  - variance_expliquee: Variance expliquée par chaque composante
-  - loadings_df: DataFrame contenant les loadings
-  """
-
-  scaler = StandardScaler()
-  imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
-  pca = PCA(n_components=10)
-
-  if col_to_remove is not None:
-    df = df.drop(col_to_remove, axis=1)
-
-  elif col_for_PCA is not None:
-    df = df[col_for_PCA]
-
-  # On scale les variables de notre dataframe
-  df_scaled = scaler.fit_transform(df)
-
-  # On applique la stratégie pour les valeurs manquantes
-  df_imputed = pd.DataFrame(imputer.fit_transform(df_scaled))
-
-  # On réalise la PCA
-  pca_result = pca.fit_transform(df_imputed)
-
-  # On stocke la PCA dans un dataframe
-  df_pca = pd.DataFrame(pca_result,
-                      columns=[f'PC{i+1}' for i in range(pca_result.shape[1])],
-                      index=df.index
-                      )
-  df_pca.index = df_pca.index.astype(str)
-
-  variance_expliquee = pca.explained_variance_ratio_
-  loadings = pca.components_.T * np.sqrt(pca.explained_variance_)
-  loadings_df = pd.DataFrame(loadings, columns=[f'PC{i+1}' for i in range(loadings.shape[1])], index=df.columns)
-
-  return df_pca, variance_expliquee, loadings_df
-
-
-def plot_variance_cumule(
-    pca : pd.DataFrame,
-    var_exp : np.ndarray,
-    figsize : tuple = (6,4),
-    marker : str = 'o',
-    linestyle : str = '--',
-    xlabel : str = 'Nombre de composantes',
-    ylabel : str = 'Variance expliquée cumulée',
-    grid : bool = True
-  ):
-
-  plt.figure(figsize=figsize)
-  plt.plot(range(1, pca.shape[1]+1), np.cumsum(var_exp), marker=marker, linestyle=linestyle)
-  plt.xlabel(xlabel)
-  plt.ylabel(ylabel)
-  plt.grid(grid)
-  plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
-  plt.show()
-  
-
-
-def plot_small_grid(
-    loadings : pd.DataFrame,
-    col_to_print: list,
-    cols : int = 3,
-    set_lim : bool = False,
-    lim : tuple = None,
-    colors : list = None
-):
-
-  n = len(loadings)
-
-  # Définir la taille de la grille automatiquement
-  rows = (n + cols - 1) // cols  # Calcul du nombre de lignes nécessaires
-
-
-  fig, axes = plt.subplots(rows, cols, figsize=(cols * 4, rows * 4))
-  axes = axes.flatten()  # Pour itérer facilement, même si 1 seule ligne
-
-  if colors is None:
-    cmap = plt.get_cmap("tab20")
-    colors = [cmap(i) for i in range(len(col_to_print))]
-
-  for i, (idx, row) in enumerate(loadings[col_to_print].iterrows()):
-      axes[i].bar(row.index, row.values, color=colors)
-      axes[i].set_title(f"{idx}")
-
-      if set_lim:
-        if lim is None:
-          axes[i].set_ylim(loadings[col_to_print].values.min(), loadings[col_to_print].values.max())
-        else:
-          axes[i].set_ylim(lim[0], lim[1])
-
-  # Cacher les axes inutilisés s'il y en a
-  for j in range(i+1, len(axes)):
-      axes[j].axis('off')
-
-  plt.tight_layout()
-  plt.show()
-
-col_for_PCA = [
-  'dip_001T',
-  'dip_200R',
-  'dip_300R',
-  'dip_350R',
-  'dip_500R',
-  'dip_600R',
-  'dip_700R',
-  'proportion_imposable_ens_arr',
-  'd1_ens_arr',
-  'q1_ens_arr',
-  'q2_ens_arr',
-  'q3_ens_arr',
-  'd9_ens_arr',
-  'gini_ens_arr',
-  ]
-
-df_arr_full.index= df_arr_full['arr24']
-
-pca_arr_ses, var_exp_arr_ses, load_arr_ses = make_pca(
-    df = df_arr_full,
-    col_for_PCA = col_for_PCA,
-    n_components = 10
-    )
-```
+While this population does not perfectly represent the incident population, we estimate that it closely approximates it. Patients already diagnosed with type 1 diabetes are generally aware of the risk of acidosis and have the tools to monitor their glucose levels to prevent it. However, it is possible that some patients without acidosis may be hospitalized and subsequently diagnosed with type 1 diabetes. We hypothesize that this subgroup is relatively small compared to the population we filtered.
 
 ```{python}
-#| fig-align: 'center'
-#| fig-cap: "Share of Explained Variance, Socio-Economic Variables, PCA"
-plot_variance_cumule(
-    pca = pca_arr_ses,
-    var_exp = var_exp_arr_ses,
+#| fig-cap: Distribution of "incident population by age"
+total_t1d_e101['sexe'] = pd.Categorical(total_t1d_e101['sexe'])
+total_t1d_e101['sexe_label'] = total_t1d_e101['sexe'].map({2: 'female', 1: 'male'})
+
+
+cmap = cm.get_cmap('tab10', 2)
+colors = [mcolors.rgb2hex(cmap(i)) for i in range(cmap.N)]
+
+(
+    ggplot(total_t1d_e101, aes(x='age', y='count', fill='sexe_label')) +
+    geom_bar(stat='identity', width=1.5) +
+    scale_fill_identity() +  # pour utiliser les couleurs telles quelles
+    scale_fill_manual(values=colors, name='Sex') +
+    ylab('Number of cases') +
+    theme_minimal(base_size=14) +
+    theme(figure_size=(8, 5))
 )
 ```
 
-```{python}
-plot_small_grid(
-    loadings = load_arr_ses,
-    col_to_print = ['PC1','PC2','PC3','PC4','PC5','PC6'],
-    cols = 4,
-    set_lim = True,
-    lim = (-1, 1),
+In order to control that this population is somehow the incident population, we compared it with the population being diagnosed for all forms of T1D (codes to E101 to E109) which we could assume is the prevalent population. With such filters we obtain the following population : 
+
+``` {python}
+total_t1d['sexe'] = pd.Categorical(total_t1d['sexe'])
+total_t1d['sexe_label'] = total_t1d['sexe'].map({2: 'female', 1: 'male'})
+
+cmap = cm.get_cmap('tab10', 2)
+colors = [mcolors.rgb2hex(cmap(i)) for i in range(cmap.N)]
+
+(
+    ggplot(total_t1d, aes(x='age', y='count', fill='sexe_label')) +
+    geom_bar(stat='identity', width=1.5) +
+    scale_fill_identity() +  # pour utiliser les couleurs telles quelles
+    scale_fill_manual(values=colors, name = "Sex") +
+    ylab('Proportion') +
+    theme_minimal(base_size=14) +
+    theme(figure_size=(8, 5))
 )
 
-
 ```
+
+Our hypothesis is that our "incident population" closely resembles what we would expect for an incident population of type 1 diabetes (T1D), as compared to the "prevalent population." Consequently, for our models, we will select patients under 25 years old.
+
+Furthermore, we observe that the weekly distribution of hospital visits differs between the incident and prevalent populations (see graphic below). This leads us to conclude that, while our isolated population may not be the exact incident population, it still exhibits distinct characteristics compared to the prevalent population.
+
+Specifically, we note two major differences between the distributions of T1D - All (the prevalent population) and T1D - E101 (the incident population). First, there is a significant decrease in visits during the summer (approximately weeks 27 to 35) for the T1D - All population, whereas no such decrease is observed for the T1D - E101 population. This can be explained by the fact that acidosis has severe effects on the body and requires immediate treatment.
+
+Secondly, the distribution of T1D - E101 visits exhibits a U-shape, with more visits occurring during winter than summer. This pattern is not representative of the T1D - All distribution. This latter difference further supports our conclusion that our two populations exhibit distinct characteristics.
+
+
+```{python}
+t1_visits['value'] = pd.to_numeric(t1_visits['value'], errors='coerce')
+
+
+plt = t1_visits.copy()
+plt = plt[plt['variable'] == 'week']
+plt = plt[plt['value'] <= 52]
+plt['prop'] = pd.to_numeric(plt['prop'], errors='coerce')
+
+
+cmap = cm.get_cmap('Paired')
+colors = [mcolors.rgb2hex(cmap(i)) for i in [2, 3, 6]]
+
+(
+    ggplot(plt, aes(x='value', y='prop', fill='population')) +
+    geom_bar(stat='identity', width=1) +
+    scale_fill_manual(values=colors) + # This is the correct way to set fill colors
+    facet_wrap("population") +
+    ylab('Proportion of visits') +
+    xlab('weeks of year') +
+    theme_minimal(base_size=14) +
+    theme(figure_size=(10, 3),legend_position='none',)
+)
+```
+
+### Associated diagnosis
+
+We also aim to leverage the PMSI Data to identify potential correlations between type 1 diabetes (T1D) diagnoses and other associated diagnoses. We acknowledge that, without medical analysis, it is challenging to determine whether T1D is a cause of an associated diagnosis or if the associated diagnosis is a symptom indicating an increased risk of T1D. Nevertheless, this analysis may provide valuable insights that we can further explore using additional variables.
+
+
+```{python}
+t1d_associations = t1d_associations[~t1d_associations['specific_diag'].isin(['Calcium','Drugs','Employment','Vitamin B12'])]
+
+cmap = cm.get_cmap('tab20', 20)
+colors = [mcolors.rgb2hex(cmap(i)) for i in range(cmap.N)]
+
+(
+    ggplot(t1d_associations, aes(x='population', y='prop', fill='specific_diag')) +
+    geom_bar(stat='identity') +
+    facet_wrap('~specific_diag', scales='free_y') +
+    scale_fill_identity() +  # pour utiliser les couleurs telles quelles
+    scale_fill_manual(values=colors) +
+    ylab(False) +
+    theme_minimal(base_size=14)+
+    theme(
+        figure_size=(10, 7),
+        legend_position='none',
+        axis_text_x=element_text(rotation=45, hjust=1))
+)
+```
+
+From this statistical analysis, we observe that the following diagnoses are more frequently associated with the incident population compared to the prevalent population and the general hospital population:
+
+- Family stress
+- Deficiencies in vitamins D, B9, B12 (which we cannot plot for re-identification reasons), and other minerals
+- Tobacco consumption
+ 
+Alcohol consumption is also more frequent, although the difference in frequency tends to diminish for younger populations (under 25 years old). Therefore, we will not include alcohol consumption in our models.
+
+Malnutrition, which we assume is directly caused by acidosis, will also be excluded from our models.
+
+Even if we cannot say in advance that those factors are symptoms of acidosis or are protective / trigerring factors, we will keep them for our first model.
+
+\newpage
+
+## Data Selection
+
+### PCA on all variables
+
+In order to select features from the data at your disposal, we use a Principal Components Analysis (PCA). This tool should help us to distinguish variables which are explanatory of the variance of our dataset. The results of our PCA are presented in annexe. Below the results of the cumulative variance explained by the number of first principal components : 
+
+### PCA for social and economical variables
+
+### Synthesis of variables of interest
+
 
 
 \newpage 

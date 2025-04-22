@@ -112,7 +112,7 @@ pca_arr_ses, var_exp_arr_ses, load_arr_ses = make_pca(
     n_components=10
     )
 
-pca_arr_ses.to_csv("./results_analysis/pca_arr.csv")
+pca_arr_ses.to_csv("./results_analysis/pca_arr_ses.csv")
 print("PCA exportée")
-load_arr_ses.to_csv("./results_analysis/load_arr.csv")
+load_arr_ses.to_csv("./results_analysis/load_arr_ses.csv")
 print("Loads exportés")

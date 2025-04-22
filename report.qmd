@@ -127,22 +127,8 @@ t1d_associations = pd.read_csv("results_analysis/t1d_associations.csv")
 
 ## Data provided by Sanofi 
 
-The Sanofi teams provided us with a dataset in .csv format. A summary of the data is presented in the table below:
+The Sanofi teams provided us with a dataset in .csv format. A summary of the data is presented in --Annex--:
 
-```{python}
-#| results: asis
-#| output: asis
-#| tbl-cap: "Main Regression Results"
-
-data_sanofi = pd.read_csv("data/sanofi_data.csv")
-
-print(build_table(
-        data_sanofi[data_sanofi['description'].str.endswith(("arr24", "bv2022"))],
-        include_pval=True,
-        midrule_after=26,
-        exclude_pattern=default_pattern
-    ))
-```
  
 ## Complementary Data
 
@@ -954,7 +940,218 @@ No other variables reach our choosen level of statistical significance (10%). No
 
 # Appendix 
 
+## Prevalent population and incident population by "departements"
+
+```{python}
+import matplotlib.pyplot as plt
+import geopandas as gpd
+from matplotlib.patches import Patch
+import pandas as pd
+import numpy as np
+def mapping_function(
+    map : gpd.GeoDataFrame,
+    df : pd.DataFrame,
+    key_to_merge : str,
+    how: str = 'right',
+    key_to_print: list = None,
+    key_to_pass : list = None,
+    forcing : bool = False,   # force the creation of the file,
+    color_map : str = "managua",
+    verbose : bool = True,
+    centered : bool = False,
+    bornes_for_all : list = [],
+    miss_color: str = 'white'
+):
+
+  map_ = map.copy()
+  map_ = map_[[key_to_merge, 'geometry']]
+
+  carto = pd.merge(map_, df, on=key_to_merge, how=how)
+
+  if key_to_print is not None:
+    carto = carto[key_to_print + ['geometry']]
+
+  i = 1
+  nb = carto.shape[1]
+
+  for key in carto.columns:
+    name = key 
+
+    if os.path.exists(name) and forcing == False:
+      i+= 1
+      if verbose:
+        print(f"\r--> Already exists : {name}", flush=False)
+      pass
+
+    else:
+      if key in key_to_pass:
+        i+= 1
+        if verbose:
+          print(f"\r--> Passed : {name}", flush=False)
+        pass
+
+      else:
+
+        if centered:
+          mabs = max(abs(carto[key].min()), abs(carto[key].max()))
+          vmin = -mabs
+          vmax = mabs
+
+        elif bornes_for_all != []:
+          vmin = bornes_for_all[0]
+          vmax = bornes_for_all[1]
+
+        else:
+          vmin = carto[key].min()
+          vmax = carto[key].max()
+
+        fig = plt.figure(figsize=(10, 10))
+        ax = fig.add_axes([0.05, 0.1, 0.75, 0.8])
+
+        ax.set_title(f"{key}", fontsize=15)
+
+        # Tracer la carte des localités, colorée selon la valeur associée
+        carto.plot(
+            column=key,
+            cmap=color_map,
+            legend=False,
+            ax=ax,
+            missing_kwds={'color': miss_color},
+            edgecolor='black',
+            linewidth=0.1,
+            vmin=vmin,
+            vmax=vmax
+        )
+        ax.set_axis_off()
+
+        cax = fig.add_axes([0.85, 0.25, 0.02, 0.4])
+        # [gauche, bas, largeur, hauteur] - toutes les valeurs entre 0 et 1
+
+        # Ajouter la colorbar dans cet axe
+        cbar = fig.colorbar(ax.collections[0], cax=cax)
+        cbar.ax.tick_params(labelsize=8)
+
+        # Ajouter une légende pour les valeurs manquantes
+        handles = [Patch(facecolor=miss_color, edgecolor='black', label='Valeurs manquantes')]
+        ax.legend(handles=handles, loc='upper left', bbox_to_anchor=(0.85, 1.05))
+
+        if verbose:
+          print(f"\rProcessing [{i}/{nb}] : {key}", end="", flush=True)
+        
+        plt.show()
+
+        i+= 1
+        if verbose:
+          print(f"\r--> Done : {name}", flush=False)
+
+def refine_code(x, n):
+  x = str(x)
+  if 'A' in x.upper() or 'B' in x.upper():
+    return np.nan
+  if len(x) == n - 1:
+    return '0' + x
+  else:
+    return x
+```
+
+```{python}
+#| fig-cap: Incidence for T1D (based on T1D - E101 population) 
+departements = gpd.read_file("ressources/departements.geojson")
+
+departements['dep'] = departements['code']
+departements['dep'] = departements['dep'].apply(lambda x: refine_code(x, 2))
+departements = departements[departements['dep'].notna()]
+departements['dep'] = departements['dep'].astype(str)
+
+# Départements
+t1d_dep = pd.read_csv("results_analysis/t1d_levels_dep.csv")
+
+# Incidence par Départements
+t1d_dep_inc = t1d_dep[t1d_dep['type']=='t1d_e101']
+
+# prévalence par Départements
+t1d_dep_prev = t1d_dep[t1d_dep['type']=='t1d']
+
+t1d_dep_inc['dep'] = t1d_dep_inc['dep'].apply(lambda x: refine_code(x, 2))
+t1d_dep_prev['dep'] = t1d_dep_prev['dep'].apply(lambda x: refine_code(x, 2))
+
+t1d_dep_inc['incidence'] = t1d_dep_inc['count'] / t1d_dep_inc['pop_0029']
+t1d_dep_prev['prevalence'] = t1d_dep_prev['count'] / t1d_dep_prev['pop_0044']
+
+
+# Incidence
+mapping_function(
+    map = departements,
+    df = t1d_dep_inc,
+    how='left',
+    key_to_merge = "dep",
+    key_to_print=['incidence'],
+    key_to_pass = ["nom", "geometry", "code","code_arr","arr24"],
+    forcing = True,
+    color_map = "Blues",
+    verbose = False,
+    centered = False,  # adapt to every colmun
+    bornes_for_all = [], # not used if centerd = True // if empty and centered = False --> default min and max per column
+    miss_color = 'grey'
+)
+
+
+```
+
+```{python}
+#| fig-cap: Prevalence for T1D (based on T1D - All population) 
+mapping_function(
+    map = departements,
+    df = t1d_dep_prev,
+    how='left',
+    key_to_merge = "dep",
+    key_to_print=['prevalence'],
+    key_to_pass = ["nom", "geometry", "code","code_arr","arr24"],
+    forcing = True,
+    color_map = "Oranges",
+    verbose = False,
+    centered = False,  # adapt to every colmun
+    bornes_for_all = [], # not used if centerd = True // if empty and centered = False --> default min and max per column
+    miss_color = 'grey'
+)
+```
+
+\newpage
 ## Note on Feature Selection
+### Mapping of PCA for all variables
+
+```{python}
+def reco_code(x):
+  x = str(x)
+  a = x[:2]
+  b = x[4:]
+  if 'A' in a or 'B' in a:
+    return np.nan
+  else:
+    return str(a) + str(b)
+
+arrondissements = gpd.read_file("ressources/arrondissements.geojson")
+
+arrondissements['arr24'] = arrondissements['code'].apply(lambda x: reco_code(x))
+arrondissements = arrondissements[arrondissements['arr24'].notna()]
+
+pca_arr = pd.read_csv("results_analysis/pca_arr.csv")
+print(pca_arr.head())
+
+mapping_function(
+    map = arrondissements,
+    df = pca_arr,
+    key_to_merge = "arr24",
+    key_to_print= ['PC1'],
+    key_to_pass = ["nom", "geometry", "code","code_arr","arr24"],
+    forcing = True,
+    color_map = "RdBu",
+    verbose = False,
+    centered = True,  # adapt to every colmun
+    bornes_for_all = [], # not used if centerd = True // if empty and centered = False --> default min and max per column
+    miss_color = 'grey'
+)
+```
 
 \newpage 
 

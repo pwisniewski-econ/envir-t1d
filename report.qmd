@@ -1119,6 +1119,106 @@ mapping_function(
 
 \newpage
 ## Note on Feature Selection
+
+### Top 7 negative and positive features projected on PCA with all variables
+
+```{python}
+import pandas as pd
+from plotnine import *
+from matplotlib import cm, colors as mcolors
+load_p = pd.read_csv("results_analysis/load_arr.csv")
+
+load_p = load_p.rename(columns={"Unnamed: 0": "Feature"})
+load_p = load_p.set_index("Feature")
+
+
+def plot_top_loading_simple(df: pd.DataFrame,
+                                     col_names: list,
+                                     top_n: int = 5):
+    top_entries = []
+
+    for col in col_names:
+        top_pos = df[col].nlargest(top_n)
+        top_neg = df[col].nsmallest(top_n)
+
+        temp_df = pd.concat([top_pos, top_neg]).reset_index()
+        temp_df.columns = ['Feature', 'Loading']
+        temp_df['Component'] = col
+
+        top_entries.append(temp_df)
+
+    df_long = pd.concat(top_entries, ignore_index=True)
+    df_long['Feature'] = df_long['Feature'].astype(str)
+
+    p = (
+        ggplot(df_long, aes(x='Feature', y='Loading')) +
+        geom_bar(stat='identity', fill='blue') +
+        facet_wrap('~Component', ncol=1, scales='free_y') +
+        coord_cartesian(ylim=(-1, 1)) +  # 👈 ici on fixe les limites
+        theme_minimal() +
+        theme(
+            figure_size=(8, 6),
+            axis_text_x=element_text(rotation=90, hjust=1),
+        ) +
+        labs(title=f'Top {top_n} positiv and negative variables for {col}',
+             x='', y='')
+    )
+
+    return p
+
+
+   
+```
+
+```{python}
+#| fig-cap: Results of PCA for all variables - PC1
+plot_top_loading_simple(
+    df=load_p,
+    col_names=['PC1'],
+    top_n=7) 
+```
+
+```{python}
+#| fig-cap: Results of PCA for all variables - PC2
+plot_top_loading_simple(
+    df=load_p,
+    col_names=['PC2'],
+    top_n=7) 
+```
+
+```{python}
+#| fig-cap: Results of PCA for all variables - PC3
+plot_top_loading_simple(
+    df=load_p,
+    col_names=['PC3'],
+    top_n=7) 
+```
+
+```{python}
+#| fig-cap: Results of PCA for all variables - PC4
+plot_top_loading_simple(
+    df=load_p,
+    col_names=['PC4'],
+    top_n=7) 
+```
+
+```{python}
+#| fig-cap: Results of PCA for all variables - PC5
+plot_top_loading_simple(
+    df=load_p,
+    col_names=['PC5'],
+    top_n=7) 
+```
+
+```{python}
+#| fig-cap: Results of PCA for all variables - PC6
+plot_top_loading_simple(
+    df=load_p,
+    col_names=['PC6'],
+    top_n=7) 
+```
+
+
 ### Mapping of PCA for all variables
 
 ```{python}

@@ -126,6 +126,23 @@ t1d_associations = pd.read_csv("results_analysis/t1d_associations.csv")
 ```
 
 ## Data provided by Sanofi 
+
+The Sanofi teams provided us with a dataset in .csv format. A summary of the data is presented in the table below:
+
+```{python}
+#| results: asis
+#| output: asis
+#| tbl-cap: "Main Regression Results"
+
+data_sanofi = pd.read_csv("data/sanofi_data.csv")
+
+print(build_table(
+        data_sanofi[data_sanofi['description'].str.endswith(("arr24", "bv2022"))],
+        include_pval=True,
+        midrule_after=26,
+        exclude_pattern=default_pattern
+    ))
+```
  
 ## Complementary Data
 
@@ -148,7 +165,7 @@ Our primary objective was to isolate the target population from the 2023 PMSI Da
 While this population does not perfectly represent the incident population, we estimate that it closely approximates it. Patients already diagnosed with type 1 diabetes are generally aware of the risk of acidosis and have the tools to monitor their glucose levels to prevent it. However, it is possible that some patients without acidosis may be hospitalized and subsequently diagnosed with type 1 diabetes. We hypothesize that this subgroup is relatively small compared to the population we filtered.
 
 ```{python}
-#| fig-cap: Distribution of "incident population by age"
+#| fig-cap: Distribution of "incident" population by age
 total_t1d_e101['sexe'] = pd.Categorical(total_t1d_e101['sexe'])
 total_t1d_e101['sexe_label'] = total_t1d_e101['sexe'].map({2: 'female', 1: 'male'})
 
@@ -170,6 +187,7 @@ colors = [mcolors.rgb2hex(cmap(i)) for i in range(cmap.N)]
 In order to control that this population is somehow the incident population, we compared it with the population being diagnosed for all forms of T1D (codes to E101 to E109) which we could assume is the prevalent population. With such filters we obtain the following population : 
 
 ``` {python}
+#| fig-cap: Distribution of "prevalent" population by age
 total_t1d['sexe'] = pd.Categorical(total_t1d['sexe'])
 total_t1d['sexe_label'] = total_t1d['sexe'].map({2: 'female', 1: 'male'})
 
@@ -198,6 +216,7 @@ Secondly, the distribution of T1D - E101 visits exhibits a U-shape, with more vi
 
 
 ```{python}
+#| fig-cap: Distribution of visits through 2023 for entire population, "prevalent" population and "incident" population
 t1_visits['value'] = pd.to_numeric(t1_visits['value'], errors='coerce')
 
 
@@ -228,6 +247,8 @@ We also aim to leverage the PMSI Data to identify potential correlations between
 
 
 ```{python}
+#| fig-cap: Frequence of associated diagnosis given the population
+
 t1d_associations = t1d_associations[~t1d_associations['specific_diag'].isin(['Calcium','Drugs','Employment','Vitamin B12'])]
 
 cmap = cm.get_cmap('tab20', 20)
@@ -268,11 +289,166 @@ Even if we cannot say in advance that those factors are symptoms of acidosis or 
 
 In order to select features from the data at your disposal, we use a Principal Components Analysis (PCA). This tool should help us to distinguish variables which are explanatory of the variance of our dataset. The results of our PCA are presented in annexe. Below the results of the cumulative variance explained by the number of first principal components : 
 
+```{python}
+#| fig-cap: Cumulative variance of PCA for all variables
+import pandas as pd
+import numpy as np
+from plotnine import *
+
+df = pd.read_csv("results_analysis/var_arr.csv", delimiter=',', names=['pc','var'], header=0)
+
+df['CumulativeVariance'] = df['var'].cumsum()
+
+(
+    ggplot(df, aes(x='pc', y='CumulativeVariance')) +
+    geom_line(linetype='dashed') +
+    geom_point(size=3) +
+    labs(
+        title='Explained variance by principal components',
+        x='Number of components',
+        y='Cumulative explained variance'
+    ) +
+    theme_minimal() +
+    theme(figure_size=(7, 5)) +
+    scale_x_continuous(breaks=range(1, len(df)+1))
+)
+```
+
+The projections of the different variables are available in the Annex. It is noteworthy that the explained cumulative variance is relatively low with few components, not even reaching 0.8 for 10 components. This indicates that we cannot simply reduce dimensions using principal components; instead, we will need to manually select variables that appear to be interesting and explanatory of the total variance. The selection of variables is discussed below.
+
+To assist in selecting variables, we attempted to apply PCA to variables grouped by theme or characteristic. This dimensionality reduction will be particularly useful for control variables, such as social and economic variables. We applied PCA to the following groups: asset variables, and social and economic variables. Only the social and economic variables yielded interesting results with PCA.
+
 ### PCA for social and economical variables
+
+We recognize that social and economic variables can often be explained by fewer components. Since these variables will only be used for control in our model, it is not necessary to retain a full understanding of the principal components. However, we will propose an interpretation of these components. All variables are scaled before applying PCA.
+
+```{python}
+#| fig-cap: Cumulative variance of PCA for social and economical variables
+import pandas as pd
+import numpy as np
+from plotnine import *
+
+df = pd.read_csv("results_analysis/var_arr_ses.csv", delimiter=',', names=['pc','var'], header=0)
+
+df['CumulativeVariance'] = df['var'].cumsum()
+
+(
+    ggplot(df, aes(x='pc', y='CumulativeVariance')) +
+    geom_line(linetype='dashed') +
+    geom_point(size=3) +
+    labs(
+        title='Explained variance by principal components',
+        x='Number of components',
+        y='Cumulative explained variance'
+    ) +
+    theme_minimal() +
+    theme(figure_size=(7, 5)) +
+    scale_x_continuous(breaks=range(1, len(df)+1))
+)
+
+```
+
+We conclude that almost 90% of the variance of all social and economical variables can be explained with the first three principal components. We show below the projections of every variable on the six first principal components. The aim of this plot will be to find an interpretation of the first three components in order to validate the reduction of dimension for our social and economical variables for our models.
+
+```{python}
+#| fig-cap: Projections of PC on social and economical variables
+import pandas as pd
+import numpy as np
+from plotnine import *
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+
+def plot_small_grid_plotnine(
+    loadings: pd.DataFrame,
+    col_to_print: list,
+    cols: int = 3,
+    set_lim: bool = False,
+    lim: tuple = None,
+    colors: list = None
+):
+    # Melt the DataFrame to long format for plotnine
+    df_long = (
+        loadings[col_to_print]
+        .reset_index()
+        .melt(id_vars='index', var_name='Feature', value_name='Loading')
+        .rename(columns={'index': 'Component'})
+    )
+
+    # Generate colors if not provided
+    if colors is None:
+        cmap = cm.get_cmap("Set2", len(col_to_print))
+        colors = [mcolors.rgb2hex(cmap(i)) for i in range(cmap.N)]
+
+    # Build plot
+    p = (
+        ggplot(df_long, aes(x='Feature', y='Loading', fill='Feature')) +
+        geom_bar(stat='identity') +
+        facet_wrap('~Component', ncol=cols, scales='free_y') +
+        scale_fill_manual(values=colors) +
+        ylab('') +
+        xlab('') +
+        theme_minimal() +
+        theme(
+            figure_size=(cols * 2, (len(loadings) + cols - 1) // cols * 2),
+            axis_text_x=element_text(rotation=90, hjust=1),
+            legend_position='none',
+
+        ) +
+        labs(title='Projections of variables on PCA')
+    )
+
+    # Apply y-axis limits if needed
+    if set_lim:
+        min_y, max_y = lim if lim is not None else (
+            df_long['Loading'].min(), df_long['Loading'].max())
+        # Use coord_cartesian to set y limits for facets
+        p += coord_cartesian(ylim=(min_y, max_y))
+
+    return p
+
+load_arr_ses= pd.read_csv("results_analysis/load_arr_ses.csv")
+rename_dict = {
+  'dip_001T' : "01. Sans diplôme",
+  'dip_200R' : "02. Brevet",
+  'dip_300R' : "03. Bac Pro",
+  'dip_350R' : "04. Bac Gén.",
+  'dip_500R' : "05. Bac + 2",
+  'dip_600R' : "06. Bac + 4",
+  'dip_700R' : "07. Bac + 5",
+  'proportion_imposable_ens_arr' : "08. % pop. imposable",
+  'd1_ens_arr' : "09. 1er déc. revenu",
+  'q1_ens_arr' : "10. 1er quant. revenu",
+  'q2_ens_arr' : "11. 2e quant. revenu",
+  'q3_ens_arr' : "12. 3e quant. revenu",
+  'd9_ens_arr' : "13. 9e déc. revenu",
+  'gini_ens_arr' : "14. indic. Gini INSEE",
+}
+
+load_arr_ses = load_arr_ses.rename(index=rename_dict)
+load_arr_ses = load_arr_ses.sort_index()
+
+
+
+plot_small_grid_plotnine(
+    loadings = load_arr_ses,
+    col_to_print = ['PC1','PC2','PC3','PC4','PC5','PC6'],
+    cols = 4,
+    set_lim = True,
+    lim = (-1, 1),
+)
+```
+
+PC1 : This group may correspond to individuals with high levels of education who earn above-average salaries.
+ 
+PC2 : This group may correspond to individuals with lower educational attainment compared to those represented by PC1, but who still have relatively good salaries given their level of education.
+ 
+PC3 : This group may correspond to individuals who mostly hold a general Baccalauréat up to a Bachelor's or Master's degree (Bac +4), but who tend to have relatively modest salaries given their level of education.
+
+To conclude our 3 first components are meaningfull, we will keep them for our models.
 
 ### Synthesis of variables of interest
 
-
+A table with variables of interest that we keep for our models is available in ---Annex---
 
 \newpage 
 

@@ -49,7 +49,6 @@ po/*~
 rsconnect/
 
 # Data Folder
-data/*
 !data/README.MD
 *.parquet
 report.pdf

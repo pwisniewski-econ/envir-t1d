@@ -86,7 +86,19 @@ pca_arr.to_csv("./results_analysis/pca_arr.csv")
 print("PCA exportée")
 load_arr.to_csv("./results_analysis/load_arr.csv")
 print("Loads exportés")
+df = pd.DataFrame(var_exp_arr)
+df.to_csv("./results_analysis/var_arr.csv")
+print("variance exportée")
 
+d = []
+for i in range(len(var_exp_arr)):
+    d.append({"pc" : i + 1, "var": var_exp_arr[i] })
+print(var_exp_arr)
+print(d)
+
+df = pd.DataFrame(d, index=None, columns=["pc","var"])
+df.to_csv("./results_analysis/var_arr.csv")
+print("variance exportée")
 
 # PCA POUR LES VARIABLES SOCIO ECONOMIQUES
 col_for_PCA = [
@@ -116,3 +128,12 @@ pca_arr_ses.to_csv("./results_analysis/pca_arr_ses.csv")
 print("PCA exportée")
 load_arr_ses.to_csv("./results_analysis/load_arr_ses.csv")
 print("Loads exportés")
+
+d = []
+for i in range(len(var_exp_arr_ses)):
+    d.append({"pc" : i + 1, "var": var_exp_arr_ses[i] })
+
+df = pd.DataFrame(d, index=None, columns=["pc","var"])
+
+df.to_csv("./results_analysis/var_arr_ses.csv")
+print("variance exportée")

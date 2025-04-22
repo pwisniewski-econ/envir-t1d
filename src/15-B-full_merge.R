@@ -139,6 +139,7 @@ dep_path <- "data/interim/departement/"
 ADEME_DEP <- read_feather(paste0(dep_path, "ademe_dpe.feather"))
 WEATHER_DEP <- read_feather(paste0(dep_path, "weather_2023.feather"))
 FILO_DEP <- read_feather(paste0(dep_path, "filosofi.feather"))
+WATERQ_DEP <- read_feather(paste0(dep_path, "water_quality.feather"))
 
 DEP_DATA <- WEATHER_DEP |>
   filter(as.numeric(dep)<97) |>

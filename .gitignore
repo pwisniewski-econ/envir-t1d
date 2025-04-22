@@ -51,4 +51,4 @@ rsconnect/
 # Data Folder
 data/*
 !data/README.MD
-
+*.parquet

@@ -1,0 +1,686 @@
+---
+execute:
+  echo: false
+  message: false
+  warning: false
+format:
+    pdf: 
+        number-sections: true
+        block-headings: false
+        fig-format: pdf
+        code-block-border-left: "#5b5b5b"
+        code-block-bg: "#fafafa "
+        highlight-style: pygments
+        documentclass: article
+        toc: true
+        toc-depth: 2
+        toccolor: black
+        citecolor: black
+        urlcolor: gray
+        fontsize: "12pt"
+        pdf-engine: pdflatex
+        include-before-body: 
+        - text: |
+            \input{ressources/title-page/title-page.tex}
+        include-in-header:
+        - text: |
+            \usepackage{graphicx}
+            \usepackage{pdflscape}
+            \usepackage{pdfpages}
+            \newcommand*{\boldone}{\text{\usefont{U}{bbold}{m}{n}1}}
+            \usepackage[a4paper, portrait, footnotesep=0.75cm, margin=2.54cm]{geometry}
+            \usepackage{enumitem}
+            \usepackage{parskip}
+            \usepackage{titling}
+            \linespread{1.5}
+            \usepackage[T1]{fontenc}
+            \usepackage[hidelinks]{hyperref}
+            \hypersetup{linkcolor={black}}
+            \usepackage{amsmath}
+            \usepackage{amsfonts}
+            \usepackage[normalem]{ulem}
+            \usepackage{times}
+            \usepackage{sectsty}
+            \usepackage[backend=biber, url=false, style=authoryear, sorting=ydnt]{biblatex}
+---
+
+
+
+```{python}
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+```
+
+\clearpage
+
+# General Introduction
+
+\newpage 
+
+
+
+# Literature Review
+
+\newpage
+
+# Data Presentation
+
+
+```{python}
+df_arr_full = pd.read_feather("results_building/arrondissement-full.feather")
+df_dep_full = pd.read_feather("results_building/dep-full.feather")
+
+def make_pca(
+    df: pd.DataFrame,
+    col_for_PCA: list = None,
+    col_to_remove: list = None,
+    n_components: int = 10
+    ):
+
+  """
+  Effectue une PCA sur un dataframe
+  Si col_for_PCA est renseigné, la PCA est effectué sur ces colonnes,
+  Si col_to_remove est renseigné, ces colonnes sont supprimées du dataframe et la
+  PCA est faite sur le DataFrame
+
+  Renvoie:
+  - df_pca: DataFrame contenant les composantes principales
+  - variance_expliquee: Variance expliquée par chaque composante
+  - loadings_df: DataFrame contenant les loadings
+  """
+
+  scaler = StandardScaler()
+  imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
+  pca = PCA(n_components=10)
+
+  if col_to_remove is not None:
+    df = df.drop(col_to_remove, axis=1)
+
+  elif col_for_PCA is not None:
+    df = df[col_for_PCA]
+
+  # On scale les variables de notre dataframe
+  df_scaled = scaler.fit_transform(df)
+
+  # On applique la stratégie pour les valeurs manquantes
+  df_imputed = pd.DataFrame(imputer.fit_transform(df_scaled))
+
+  # On réalise la PCA
+  pca_result = pca.fit_transform(df_imputed)
+
+  # On stocke la PCA dans un dataframe
+  df_pca = pd.DataFrame(pca_result,
+                      columns=[f'PC{i+1}' for i in range(pca_result.shape[1])],
+                      index=df.index
+                      )
+  df_pca.index = df_pca.index.astype(str)
+
+  variance_expliquee = pca.explained_variance_ratio_
+  loadings = pca.components_.T * np.sqrt(pca.explained_variance_)
+  loadings_df = pd.DataFrame(loadings, columns=[f'PC{i+1}' for i in range(loadings.shape[1])], index=df.columns)
+
+  return df_pca, variance_expliquee, loadings_df
+
+
+def plot_variance_cumule(
+    pca : pd.DataFrame,
+    var_exp : np.ndarray,
+    figsize : tuple = (6,4),
+    marker : str = 'o',
+    linestyle : str = '--',
+    xlabel : str = 'Nombre de composantes',
+    ylabel : str = 'Variance expliquée cumulée',
+    grid : bool = True
+  ):
+
+  plt.figure(figsize=figsize)
+  plt.plot(range(1, pca.shape[1]+1), np.cumsum(var_exp), marker=marker, linestyle=linestyle)
+  plt.xlabel(xlabel)
+  plt.ylabel(ylabel)
+  plt.grid(grid)
+  plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
+  plt.show()
+  
+
+
+def plot_small_grid(
+    loadings : pd.DataFrame,
+    col_to_print: list,
+    cols : int = 3,
+    set_lim : bool = False,
+    lim : tuple = None,
+    colors : list = None
+):
+
+  n = len(loadings)
+
+  # Définir la taille de la grille automatiquement
+  rows = (n + cols - 1) // cols  # Calcul du nombre de lignes nécessaires
+
+
+  fig, axes = plt.subplots(rows, cols, figsize=(cols * 4, rows * 4))
+  axes = axes.flatten()  # Pour itérer facilement, même si 1 seule ligne
+
+  if colors is None:
+    cmap = plt.get_cmap("tab20")
+    colors = [cmap(i) for i in range(len(col_to_print))]
+
+  for i, (idx, row) in enumerate(loadings[col_to_print].iterrows()):
+      axes[i].bar(row.index, row.values, color=colors)
+      axes[i].set_title(f"{idx}")
+
+      if set_lim:
+        if lim is None:
+          axes[i].set_ylim(loadings[col_to_print].values.min(), loadings[col_to_print].values.max())
+        else:
+          axes[i].set_ylim(lim[0], lim[1])
+
+  # Cacher les axes inutilisés s'il y en a
+  for j in range(i+1, len(axes)):
+      axes[j].axis('off')
+
+  plt.tight_layout()
+  plt.show()
+
+col_for_PCA = [
+  'dip_001T',
+  'dip_200R',
+  'dip_300R',
+  'dip_350R',
+  'dip_500R',
+  'dip_600R',
+  'dip_700R',
+  'proportion_imposable_ens_arr',
+  'd1_ens_arr',
+  'q1_ens_arr',
+  'q2_ens_arr',
+  'q3_ens_arr',
+  'd9_ens_arr',
+  'gini_ens_arr',
+  ]
+
+df_arr_full.index= df_arr_full['arr24']
+
+pca_arr_ses, var_exp_arr_ses, load_arr_ses = make_pca(
+    df = df_arr_full,
+    col_for_PCA = col_for_PCA,
+    n_components = 10
+    )
+```
+
+```{python}
+#| fig-align: 'center'
+#| fig-cap: "Share of Explained Variance, Socio-Economic Variables, PCA"
+plot_variance_cumule(
+    pca = pca_arr_ses,
+    var_exp = var_exp_arr_ses,
+)
+```
+
+```{python}
+plot_small_grid(
+    loadings = load_arr_ses,
+    col_to_print = ['PC1','PC2','PC3','PC4','PC5','PC6'],
+    cols = 4,
+    set_lim = True,
+    lim = (-1, 1),
+)
+
+
+```
+
+
+\newpage 
+
+# Methodological Overview
+
+Selecting variables for the primary model presented a significant challenge due to the numerous features available in the rich dataset created during this project. While automatic variable selection techniques, such as the elastic net, were considered, they are ill-suited to this research's primary goal: inference rather than prediction (as established in the introduction).
+
+Employing variable selection methods driven by relationships within the dataset itself compromises subsequent statistical inference. Most notably, it renders p-values unreliable for controlling the risk of Type I errors. Furthermore, automatic selection introduces interpretative difficulties. In observational settings often characterized by unobserved heterogeneity, it becomes challenging to discern the substantive reasons for a variable's inclusion beyond its predictive performance or simple correlation with the outcome (here, T1D).
+
+Therefore, we adopted a manual selection approach. This allows us to incorporate variables based on pre-defined hypotheses regarding their potential influence, informed by theoretical considerations from the literature, results from our exploratory PCA (which excluded T1D-related variables), and descriptive statistics concerning seasonality and associated diagnoses. For transparency, the justification for each chosen variable is provided in the annex to this report.
+
+Our primary analysis employs Poisson and Negative Binomial regression models to explain the number of "new cases" observed at various geographical levels. To address inherent concerns about the ecological fallacy, where aggregate-level associations may not accurately reflect individual-level risks, we leverage data across different geographic levels and conduct heterogeneity analyses within selected sub-populations. Finding consistent results across these different levels and groups strengthens the evidence for the robustness of inference.
+
+However, given the limitations common to observational studies, our initial findings are still sensitive to the specific set of control variables included in the model. Therefore, we identify promising explanatory variables from these primary models to investigate further using methods designed for more robust causal inference, treating these variables conceptually as "treatments." \newpage 
+
+Specifically, we conduct subsequent analyses using either:
+
+1.	**Panel data models with fixed effects**: This approach utilizes longitudinal data to control for time-invariant unobserved characteristics of the geographical units.
+2.	**Double/Debiased Machine Learning (DDML)**: This technique uses machine learning to flexibly control for a potentially large number of confounding variables, aiming to provide less biased estimates of the "treatment" effect. While mechanically different, DDML shares a fundamental goal with methods like propensity score matching: estimating treatment effects by creating comparable conditions between units exposed and unexposed to the "treatment." Furthermore, DDML inherently aids in managing high-dimensional controls through a predictive first-stage estimation.
+
+```{python}
+MAIN_RESULTS = pd.read_csv('results_analysis/main_results.csv')
+
+rename_map = {
+    '(Intercept)': 'Intercept',
+    'PC1': 'Socio-economic PC1',
+    'PC2': 'Socio-economic PC2',
+    'PC3': 'Socio-economic PC3',
+    'ac_prop': 'Share of Homes with AC',
+    'coups': 'Assaults (per 1k)',
+    'diag_calcium': 'Share w/ Calcium Def.',
+    'diag_family': 'Share w/ Family Issues',
+    'diag_other_minerals': 'Share w/ Mineral Def.',
+    'diag_tabacco': 'Share w/ Tabacco Addic.',
+    'diag_vitamin_b12': 'Share w/ Vitamin B12 Def.',
+    'diag_vitamin_b9': 'Share w/ Vitamin B9 Def.',
+    'diag_vitamin_d': 'Share w/ Vitamin D Def.',
+    'ges_resid': 'Residential GHG (per 1k)',
+    'n_ape4722z': 'Butchers (per 1k)',
+    'n_ape4723z': 'Fishmongers (per 1k)',
+    'n_ape5610c': 'Fast Foods (per 1k)',
+    'n_ape9312z': 'Gyms (per 1k)',
+    'n_equip_a1': 'Public Services (per 1k)',
+    'n_equip_c1': 'Teaching Primary (per 1k)',
+    'n_equip_c2': 'Teaching Secondary (per 1k)',
+    'n_equip_d2': 'Medical Facilities (per 1k)',
+    'no2_mean_concentration': 'NO2 Concentration (air)',
+    'o3_mean_concentration': 'O3 Concentration (air)',
+    'pm10_mean_concentration': 'PM10 Concentration (air)',
+    'prop_robinet': 'Share of tap drinkers',
+    'prop_robinet:water_ph': 'Tap drinking x Water PH',
+    'somo35_mean': 'Excess Ozone (air)',
+    'tm_summer': 'Summer temperature',
+    'tm_winter': 'Winter temperature',
+    'water_no3': 'NO3 Concentrations (water)',
+    'water_no3:prop_robinet': 'Tap drinking x NO3',
+    'water_ph': 'Water PH',
+    'aic': 'AIC',
+    'df': 'DF',
+    'dispersion': 'Dispersion',
+    'pseudo_r2': 'Pseudo $R^2$'
+}
+
+
+default_pattern = r"^(\(|n_equip_|tm_|water_|prop_robinet|diag_vitamin_b|diag_other_minerals|diag_family|somo|ges)"
+
+# Utility functions ----
+def format_beta(beta: float, pval: float) -> str:
+    rounded = round(beta, 5)
+    stars = '***' if pval < 0.01 else '**' if pval < 0.05 else '*' if pval < 0.1 else ''
+    return f"{rounded}{stars}"
+
+def format_pval(pval: float) -> str:
+    return str(round(pval, 4))
+
+def escape_underscore(text: str) -> str:
+    return text.replace('_', r'\_')
+
+def build_table(
+    df: pd.DataFrame,
+    include_pval: bool = False,
+    midrule_after: int = 15,
+    exclude_pattern: str = None
+) -> str:
+
+    data = df.copy()
+
+    # Format beta column
+    data['beta'] = data.apply(lambda row: format_beta(row['beta'], row['pval']), axis=1)
+
+    # Conditionally format or drop pval
+    if include_pval:
+        data['pval'] = data['pval'].apply(format_pval)
+        metrics = ['beta', 'pval']
+    else:
+        data = data.drop(columns=['pval'])
+        metrics = ['beta']
+
+    # Prepare coefficient table
+    coef = (
+        data[['variable', 'description'] + metrics]
+        .melt(
+            id_vars=['variable', 'description'],
+            var_name='metric',
+            value_name='value'
+        )
+        .pivot_table(
+            index=['variable', 'metric'],
+            columns='description',
+            values='value',
+            aggfunc='first'
+        )
+        .reset_index()
+    )
+
+    # Optionally filter unwanted variables
+    if exclude_pattern:
+        coef = coef[~coef['variable'].str.match(exclude_pattern)]
+    # Blank variable name for pval rows
+    if 'metric' in coef:
+        coef.loc[coef['metric'] != 'beta', 'variable'] = ''
+
+    # Keep only relevant columns
+    pattern = r'arr24|bv2022$'
+    mask = coef.columns.str.contains(pattern, regex=True)
+    cols_keep = ['variable'] + coef.columns[mask].tolist()
+    coef = coef[cols_keep].fillna('-')
+
+    # Model summary table
+    model_stats = (
+        df[df['description'].str.contains(pattern, regex=True)]
+        [['dispersion', 'df', 'pseudo_r2', 'aic', 'description']]
+        .drop_duplicates()
+        .melt(id_vars='description', var_name='variable', value_name='value')
+    )
+    model_stats['value'] = model_stats['value'].round(3).astype(str)
+
+    mask = model_stats['description'].str.startswith('negbinom') & (model_stats['variable'] == 'dispersion')
+    model_stats.loc[mask, 'value'] = '-'
+
+    
+    model_table = model_stats.pivot(
+        index='variable',
+        columns='description',
+        values='value'
+    ).reset_index()
+
+    # Combine tables
+    full = pd.concat([coef, model_table], ignore_index=True, sort=False)
+
+    # Rename variables for readability
+
+    full['variable'] = full['variable'].map(rename_map).fillna(full['variable']).apply(lambda x: x if x else '')
+    
+    # Escape underscores (if any remain)
+    full['variable'] = full['variable'].str.replace('_', r'\\_', regex=False)
+
+    # Rename columns for LaTeX
+    full.columns = [''] + [f"({i})" for i in range(1, full.shape[1])]
+
+    # Export to LaTeX
+    latex = full.to_latex(
+        index=False,
+        escape=False,
+        na_rep='-',
+        column_format='l' + 'c' * (full.shape[1] - 1),
+        longtable=True
+    )
+
+    # Insert midrule
+    lines = latex.splitlines()
+    start = next(i for i, line in enumerate(lines) if line.strip().startswith(r"\midrule"))
+    insert_pos = start + 1 + midrule_after
+    lines.insert(insert_pos, r"\midrule")
+    return '\n'.join(lines)
+
+
+
+# Load data
+
+```
+
+# Results and Comments
+
+As previously mentioned, we employ the widely used Poisson regression model to analyze the number of "incident" cases within specific French geographic units, the *bassins de vie 2022* and *arrondissements administratifs*. This model assumes that the case count $Y_i$ in unit $i$, conditional on a set of covariates $X_i$, follows a Poisson distribution: $Y_i | X_i \sim \mathcal{P}(\lambda_i)$. Model parameters are estimated using maximum likelihood estimation. The core of the model links the expected number of cases to covariates and population size through the conditional mean:
+$$E[Y_i | \mathbf{X}_i, \text{pop}_i] = \lambda_i = \text{pop}_i\cdot\exp(\mathbf{X}_i^T \boldsymbol{\beta})$$
+Here, $\text{pop}_i$ denotes the reference population under 30 years of age within the geographic unit $i$, serving as an offset that scales incidence risk to the relevant population size. The vector $\mathbf{X}_i$ includes both the control variables and variables of interest defined previously.
+
+A key assumption of the Poisson model is the equality of its conditional mean and variance: $E[Y_i \mid \mathbf{X}_i] = \text{Var}(Y_i \mid \mathbf{X}_i) = \lambda_i$. However, our data exhibit evidence of a slight overdispersion (variance exceeding the mean), with calculated dispersion indices ranging from 1.2 to 1.5. To account for this, we also estimate a Negative Binomial (NB) regression model. The NB model typically retains the same structure for the conditional mean $\mu_i$ as the Poisson model but incorporates an additional dispersion parameter $\alpha$ to allow for greater variance:
+$$ \mu_i = \text{pop}_i \cdot \exp(\mathbf{X}_i \boldsymbol{\beta}) \ \ \ \text{Var}(Y_i | \mathbf{X}_i) = \mu_i + \alpha \mu_i^2$$
+This approach offers greater flexibility in modeling the variance compared to the standard Poisson model. While estimating the NB model can sometimes lead to instability, particularly with smaller sample sizes, it directly addresses the issue of overdispersion. For comparison, estimates from both the Poisson and NB models are presented in the following table, where (1) is the NB model at the arrondissement level, (2) is the NB model at the bv2022 level, (3) is a Poisson model at the arrondissement level and finally, (4) is a Poisson model at the bv2022 level.
+
+```{python}
+#| results: asis
+#| output: asis
+#| tbl-cap: "Main Regression Results"
+
+print(build_table(
+        MAIN_RESULTS[MAIN_RESULTS['description'].str.endswith(("arr24", "bv2022"))],
+        include_pval=False,
+        midrule_after=26,
+        exclude_pattern=default_pattern
+    ))
+```
+
+Full table in appendix
+
+\newpage
+
+```{python}
+#| results: asis
+#| output: asis
+#| tbl-cap: "Subgroup Heterogeneity"
+
+print(build_table(
+        MAIN_RESULTS[MAIN_RESULTS['description'].str.endswith(("male", "female"))],
+        include_pval=False,
+        midrule_after=26,
+        exclude_pattern=default_pattern
+    ))
+```
+
+\newpage
+
+```{python}
+#| fig-cap: Poisson Fixed-Effects, Consumption Heterogeneity, Clustered SE
+import pandas as pd
+from plotnine import (
+    ggplot, aes, geom_point, geom_errorbar, geom_vline,
+    facet_wrap, theme_minimal, theme, element_text, labs,
+    geom_errorbarh, theme_classic,theme_bw, scale_color_brewer,
+    geom_abline
+)
+from matplotlib import font_manager
+import matplotlib.pyplot as plt
+
+# 1. Register your Times New Roman font
+font_path = "ressources/fonts/Times-New-Roman.otf"
+font_manager.fontManager.addfont(font_path)
+# Use it everywhere in matplotlib/plotnine:
+plt.rcParams['font.family'] = 'Times New Roman'
+plt.rcParams['figure.dpi'] = 300
+
+# 2. Read the CSV
+df = pd.read_csv("results_analysis/poisson-fixed_effects.csv")
+
+# 3. Filter, extract & recode columns
+df = (
+    df[df['description'].str.contains("fixed-poisson")]
+      .assign(
+         # extract the part after the last dash
+         description = lambda d: d['description'].str.extract(r'([^-]+)$')[0]
+           .replace({
+               "all":  "Full Population",
+               "highD":"Upper Vitamin D",
+               "lowD": "Lower Vitamin D"
+           }),
+         variable = lambda d: d['variable'].replace({
+             "umm":  "Humidity (mean)",
+             "txab": "Temperature (max)",
+             "tnab": "Temperature (min)",
+             "tm":   "Temperature (avg)",
+             "inst": "Sunshine (days)",
+             "rr":   "Precipitations (mm)"
+         })
+      )
+)
+
+# 4. Compute 95% CI bounds
+df['conf_low']  = df['beta'] - 1.96 * df['std']
+df['conf_high'] = df['beta'] + 1.96 * df['std']
+
+
+# 5. Build the plot
+p = (
+    ggplot(df, aes(x='beta', y='variable', color='description'))
+      + geom_point(size=1.5)
+      + geom_errorbarh(
+          aes(xmin='conf_low', xmax='conf_high'),
+          height=0.35, size=0.95
+        )
+      + geom_vline(xintercept=0, linetype='dashed', size=1)
+      + facet_wrap('~description', ncol=1)
+      + theme_minimal(base_size=14)
+      + theme(
+          legend_position='none',
+          text=element_text(family="Times New Roman"),
+          figure_size=(6, 5),
+          panel_spacing=.03
+        )
+      + labs(x="", y="")
+)
+
+# 6. Draw it
+p
+```
+
+\newpage
+
+```{python}
+#| fig-cap: DDML Estimates, Multiple Variables
+
+import polars as pl
+
+# 1. read & filter
+df = (
+    pl.read_csv("results_analysis/dml-results.csv")
+      .filter(pl.col("desc") != "dml-n_ape4722z")
+)
+
+mapping_df = pl.DataFrame({
+    "code": list(rename_map.keys()),
+    "description": list(rename_map.values())
+})
+
+# 2) Read & transform
+df = (
+    pl.read_csv("results_analysis/dml-results.csv")
+      # filter out that one row
+      .filter(pl.col("desc") != "dml-n_ape4722z")
+      # strip the prefix into a new column 'code'
+      .with_columns([
+          pl.col("desc")
+            .str.replace("^dml-", "", literal=False)
+            .alias("code")
+      ])
+      # left join to bring in the human labels; unmatched codes → null desc
+      .join(mapping_df, on="code", how="left")
+      # compute confidence intervals
+      .with_columns([
+          (pl.col("beta") - 1.96 * pl.col("std")).alias("conf_low"),
+          (pl.col("beta") + 1.96 * pl.col("std")).alias("conf_high")
+      ])
+      # drop any rows where our joined-in desc is null
+      .filter(pl.col("description").is_not_null())
+)
+
+p = (
+    ggplot(df, aes(x='beta', y='description', color='description'))
+    + geom_point(size=1.5)
+    + geom_errorbarh(aes(xmin='conf_low', xmax='conf_high'),
+                     height=0.2, size=0.95)
+    + geom_vline(xintercept=0, linetype='dashed', size=1)
+    + theme_minimal(base_size=14)
+    + theme(
+        legend_position='none',
+        text=element_text(family="Times New Roman"),
+        figure_size=(6, 3)
+      )
+    + labs(x="", y="")
+)
+
+
+p
+```
+
+\newpage 
+
+# Conclusion
+
+\newpage
+
+# Bibliography 
+
+\newpage
+\setcounter{section}{0}
+\renewcommand\thesection{\Alph{section}}
+
+# Appendix 
+
+## Note on Feature Selection
+
+\newpage 
+
+## Double ML Presentation
+
+\newpage 
+
+## Full Regression Results (Poisson / Neg. Binomial)
+
+```{python}
+#| results: asis
+#| output: asis
+
+print(build_table(
+    MAIN_RESULTS[MAIN_RESULTS['description'].str.endswith(("arr24", "bv2022"))],
+    include_pval=True,
+    midrule_after=77,
+    exclude_pattern=None
+))
+
+#print("\\begingroup\\center\\footnotesize\n" + build_table(MAIN_RESULTS, include_pval=True, midrule_after=30) + "\n\\endgroup")
+```
+
+\newpage 
+
+## Common Support Hypothesis (DML)
+```{python}
+residuals = pl.read_csv('results_analysis/dml-residuals.csv')
+
+p = (
+    ggplot(df, aes(x='beta', y='variable', color='description'))
+      + geom_point(size=1.5)
+      + geom_errorbarh(
+          aes(xmin='conf_low', xmax='conf_high'),
+          height=0.35, size=0.95
+        )
+      + geom_vline(xintercept=0, linetype='dashed', size=1)
+      + facet_wrap('~description', ncol=1)
+      + theme_minimal(base_size=14)
+      + theme(
+          legend_position='none',
+          text=element_text(family="Times New Roman"),
+          figure_size=(6, 5),
+          panel_spacing=.03
+        )
+      + labs(x="", y="")
+)
+
+
+
+
+# Process and merge using Polars
+df_polars = (
+    residuals
+    .filter(pl.col('desc') != 'dml-n_ape4722z')
+    .with_columns(
+        pl.col('desc').str.replace('dml-', '').alias('code')
+    )
+    .join(mapping_df, on='code', how='left')
+    .drop_nulls()
+)
+
+p = (
+    ggplot(df_polars, aes(x='real_value', y='mean_prediction'))
+    + geom_point(size=0.4)
+    + geom_abline(intercept=0, slope=1, size = 1)
+    + facet_wrap('~description', nrow=3, scales='free')
+    + theme_minimal(base_size=12)
+    + theme(
+        legend_position='none',
+        text=element_text(family="Times New Roman"),
+        figure_size=(6, 6.5),
+        panel_spacing=.03
+    )
+    + labs(x="Real Value", y="Mean Prediction")
+
+)
+
+p
+```

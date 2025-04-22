@@ -1,3 +1,4 @@
+#---------Import librarie --------
 import polars as pl
 
 rsa = pl.read_ipc("data/interim/rsa23_ano.feather")
@@ -25,7 +26,7 @@ prevalent_vis   = visits(t1d)
 incident_vis    = visits(t1d.filter(pl.col("diag")=="E101"))
 all_inds        = rsa.select(["anonyme","age","sexe","codepost"]).unique(subset="anonyme")
 
-# write out
+# Export
 for name, df in [
     ("t1d-individuals", prevalent_inds),
     ("t1d_e101-individuals", incident_inds),

@@ -1,6 +1,7 @@
+#------Import libraries-------
 import pandas as pd
 
-# Import Data -------------
+# Import passage Data -------------
 table_passage_df = (
     pd.read_feather("results_building/t_passage.feather")[[
         "code_insee24", "arr24", "bv2022"

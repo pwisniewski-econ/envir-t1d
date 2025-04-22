@@ -4,7 +4,7 @@ import pyarrow.feather as feather
 import pyarrow.parquet as pq
 import pyarrow.dataset as ds
 
-# ---- Chargement des données ----
+# ---- Loading data ----
 ALL_INDIVIDUALS = ds.dataset("results_building/all-individuals.feather", format="feather")
 
 VITAMINS_ALL = feather.read_feather("results_building/all-vitamins.feather")
@@ -14,7 +14,7 @@ VITAMINS_ALL["specific_diag"] = (
 
 POSTAL_CONVERTER = pq.read_table("data/external/postal_converter.parquet").to_pandas()
 
-# ---- Fonctions auxiliaires ----
+# ---- Auxiliary functions ----
 def get_tld_count(file, age_filt, gender_ls, level):
     dataset = ds.dataset(f"results_building/{file}", format="feather")
     df = dataset.to_table().to_pandas()
@@ -72,7 +72,7 @@ def import_data(file, age_filt, gender_ls, level, join_key):
 
     return df
 
-# ---- Génération des jeux de données ----
+# ---- Generation of data sets ----
 ARR_FULL   = import_data("arrondissement-full.parquet", 30, [1, 2], "arr24", "arr24")
 ARR_MALE   = import_data("arrondissement-full.parquet", 30, [1], "arr24", "arr24")
 ARR_FEMALE = import_data("arrondissement-full.parquet", 30, [2], "arr24", "arr24")

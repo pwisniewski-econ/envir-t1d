@@ -1,3 +1,4 @@
+#----- Import libraries --------
 import os
 import re
 import io
@@ -77,21 +78,21 @@ def get_dpe(old: bool, lim: int, export_prefix: str):
 get_dpe(old=True,  lim=1050, export_prefix="data/external/ademe-dpe/dpe_old/ademe_dpe_old_")
 get_dpe(old=False, lim=101,  export_prefix="data/external/ademe-dpe/dpe_new/ademe_dpe_new_")
 
-# Join & export ----------------
+# Join ---------
 new_files = sorted(glob.glob("data/external/ademe-dpe/dpe_new/*.csv"))
 old_files = sorted(glob.glob("data/external/ademe-dpe/dpe_old/*.csv"))
 
-# Read In ----------------
+# Read In for Fill New -------------------------------
 old_dfs = [pd.read_csv(f) for f in old_files]
 old_df = pd.concat(old_dfs, ignore_index=True, sort=False)
 
-# Fill New ----------------
+
 new_dfs = [pd.read_csv(f) for f in new_files]
 new_df = pd.concat(new_dfs, ignore_index=True, sort=False)
 new_df["anneconstruction"] = pd.NA
 new_df["priodeconstruction"] = pd.NA
 
-# Row Bind filling missing cols with NaN ----------------
+
 dpe_df = pd.concat([new_df, old_df], ignore_index=True, sort=False)
 
 # Export ----------------

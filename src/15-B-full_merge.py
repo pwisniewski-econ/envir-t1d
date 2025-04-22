@@ -1,18 +1,18 @@
+#---Import Libraries----------
 import os
 import pandas as pd
 import pyarrow.feather as feather
 
-# ─── READ BASE TABLE ────────────────────────────────────────────────────────────
+# ─── READ BASE TABLE ────────────
 BASE_TABLE = pd.read_feather("results_building/t_passage.feather")
 # keep only code_insee24 < 97100
 BASE_TABLE = BASE_TABLE.loc[
     pd.to_numeric(BASE_TABLE["code_insee24"], errors="coerce") < 97100
 ]
 
-# ─── MERGE ARRONDISSEMENTS ──────────────────────────────────────────────────────
+# ─── MERGE ARRONDISSEMENTS ───────────
 arr_path = "data/interim/arrondissements/"
 
-# (mimics list.files(..., full.names = TRUE))
 arr_files = [os.path.join(arr_path, fn) for fn in os.listdir(arr_path)]
 
 ADEME_ARR = pd.read_feather(arr_path + "ademe_dpe.feather")
@@ -54,7 +54,7 @@ ARR_DATA = (
     .merge(POP_ARR, on="arr24", how="left")
 )
 
-# scale all non‐pop columns (except arr24) by pop_tot * 1e3
+# scale
 for col in ARR_DATA.columns:
     if col not in ["arr24"] and not col.startswith("pop_"):
         ARR_DATA[col] = ARR_DATA[col] / ARR_DATA["pop_tot"] * 1e3
@@ -71,7 +71,7 @@ ARR_DATA = ARR_DATA.drop(columns="incoming_pop21")
 for df in [FILO_ARR, UNEMP_ARR, EDUC_ARR, ADEME_ARR, AIRQ_ARR, WEATHER_ARR, WATERQ_ARR]:
     ARR_DATA = ARR_DATA.merge(df, on="arr24", how="left")
 
-# write out
+# Export
 feather.write_feather(
     ARR_DATA.dropna().drop("arr_to", axis = 1),
     "results_building/arrondissement-full.feather",
@@ -79,7 +79,7 @@ feather.write_feather(
 )
 
 
-# ─── MERGE BV2022 ───────────────────────────────────────────────────────────────
+# ─── MERGE BV2022 ──────────────────────────────
 bv_path = "data/interim/bv2022/"
 
 ADEME_BV22 = pd.read_feather(bv_path + "ademe_dpe.feather")
@@ -131,14 +131,12 @@ BV22_DATA = BV22_DATA.merge(
 BV22_DATA["pop_renew"] = BV22_DATA["incoming_pop21"] / BV22_DATA["pop_tot"]
 BV22_DATA = BV22_DATA.drop(columns="incoming_pop21")
 
-# rest of the joins
 for df in [FILO_BV22, UNEMP_BV22, EDUC_BV22, ADEME_BV22, AIRQ_BV22, WATERQ_BV22]:
     BV22_DATA = BV22_DATA.merge(df, on="bv2022", how="inner")
 
-# drop any rows with missing values
 BV22_DATA = BV22_DATA.dropna().drop("bv22_to", axis = 1)
 
-# write out
+# Export
 feather.write_feather(
     BV22_DATA,
     "results_building/bv2022-full.feather",
@@ -146,7 +144,7 @@ feather.write_feather(
 )
 
 
-# ─── DEPARTMENTS ────────────────────────────────────────────────────────────────
+# ─── DEPARTMENTS ───────────────────────────
 dep_path = "data/interim/departement/"
 
 ADEME_DEP = pd.read_feather(dep_path + "ademe_dpe.feather")

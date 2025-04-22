@@ -1,18 +1,18 @@
+# ---- Import Libraries ----
 import polars as pl
 import pyarrow.feather as feather
 
-# ─── 1. Load TABLE_PASSAGE_DF ────────────────────────────────────────────────
+# ─── Load TABLE_PASSAGE_DF ─────
 TABLE_PASSAGE_DF = (
     pl.read_ipc("results_building/t_passage.feather")
       .select(["code_insee24", "arr24", "bv2022"])
       .unique()
 )
 
-# ─── 2. Load ARR2COM ────────────────────────────────────────────────────────
+# ─── Load ARR2COM ───────
 ARR2COM = pl.read_ipc("results_building/arr2com.feather")
 
-# ─── 3. Load & preprocess SIRENE_DT ────────────────────────────────────────
-#    Filter out empty codeCommuneEtablissement, rename & cast columns
+# ─── Load & preprocess SIRENE_DT ─────
 raw = pl.read_csv(
     "data/external/insee-sirene/StockEtablissement_utf8_122024.csv",
     separator=",",
@@ -66,7 +66,7 @@ SIRENE_DT = (
     ])
 )
 
-# ─── 4. Join ARR2COM → override insee_code when mapping exists ─────────────
+# ─── Join ARR2COM → override insee_code when mapping exists ────────
 SIRENE_DT = (
     SIRENE_DT
       .join(ARR2COM, left_on="insee_code", right_on="code_arr", how="left")
@@ -79,9 +79,9 @@ SIRENE_DT = (
       .drop(["code_com"])
 )
 
-# ─── 5. Define count_etabs (mimics data.table foverlaps) ───────────────────
+# ─── Define count_etabs (mimics data.table foverlaps) ────────
 def count_etabs(df: pl.DataFrame) -> pl.DataFrame:
-    # fill missing closed dates
+    # missing closed dates
     df2 = (
         df
         .with_columns([
@@ -93,11 +93,10 @@ def count_etabs(df: pl.DataFrame) -> pl.DataFrame:
         .filter(pl.col("closed") > pl.col("opened"))
     )
 
-    # build a years table with proper Date ranges
+    # years table 
     years = (
         pl.DataFrame({"year": list(range(2016, 2025))})
           .with_columns([
-              # append "-01-01" to the year string, then parse
               (pl.col("year").cast(pl.Utf8) + "-01-01")
                 .str.strptime(pl.Date, "%Y-%m-%d")
                 .alias("start"),
@@ -107,7 +106,7 @@ def count_etabs(df: pl.DataFrame) -> pl.DataFrame:
           ])
     )
 
-    # find overlaps via a cross‐join + filter
+    # overlaps via cross‐join + filter
     overlaps = (
         df2
         .join(years, how="cross")
@@ -126,7 +125,7 @@ def count_etabs(df: pl.DataFrame) -> pl.DataFrame:
     )
 
 
-# ─── 6. Equivalent of sirene_type (per APE code) ────────────────────────────
+# ─── Equivalent of sirene_type (per APE code) ───────────
 def sirene_type(ape_code: str) -> pl.DataFrame:
     df_ape = SIRENE_DT.filter(pl.col("ape") == ape_code)
     counted = count_etabs(df_ape)
@@ -134,12 +133,12 @@ def sirene_type(ape_code: str) -> pl.DataFrame:
         pl.lit(ape_code.lower().replace(".", "")).alias("ape")
     ])
 
-# ─── 7. Combine all APE codes ───────────────────────────────────────────────
+# ───  Combine all APE codes ─────────────
 ape_ls = ["56.10C", "93.12Z", "56.30Z", "47.73Z",
           "47.23Z", "47.22Z", "47.11A", "10.71C"]
 RESULTS = pl.concat([sirene_type(a) for a in ape_ls])
 
-# ─── 8. Define siren_sum (group + pivot) ───────────────────────────────────
+# ─── 8. Define siren_sum (group + pivot) ──────────
 def siren_sum(data: pl.DataFrame, level: str) -> pl.DataFrame:
     joined = data.join(
         TABLE_PASSAGE_DF,
@@ -161,7 +160,6 @@ def siren_sum(data: pl.DataFrame, level: str) -> pl.DataFrame:
         .fill_null(0)
         .sort([level, "year"])
     )
-    # rename each pivoted column to have prefix "n_ape"
     rename_map = {
         col: f"n_ape{col}"
         for col in wide.columns
@@ -169,11 +167,11 @@ def siren_sum(data: pl.DataFrame, level: str) -> pl.DataFrame:
     }
     return wide.rename(rename_map)
 
-# ─── 9. Build and write out the two tables ────────────────────────────────
+# ─── Build the two tables ───────
 RESULTS_ARR = siren_sum(RESULTS, "arr24").filter(pl.col("arr24").is_not_null())
 RESULTS_BV22 = siren_sum(RESULTS, "bv2022").filter(pl.col("bv2022").is_not_null())
 
-# write to zstd‐compressed Feather
+# Export files
 feather.write_feather(
     RESULTS_ARR.to_arrow(),
     "data/interim/arrondissements/sirene_1624.feather",

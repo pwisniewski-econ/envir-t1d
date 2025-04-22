@@ -27,7 +27,7 @@ assoc = pl.concat([
 ])
 assoc.write_csv("results_analysis/associations.csv")
 
-# CONTROLE CASD
+# CASD CONTROL
 pc = (
     POSTAL_CONVERTER
     .join(

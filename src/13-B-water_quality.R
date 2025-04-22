@@ -38,10 +38,12 @@ WATER_QB <- WATER_Q |>
 sum_water <- function(DATA, level){
   DATA |>
     group_by({{level}}, water_param) |>
-    summarise(rqana = mean(rqana)) |>
+    summarise(rqana = mean(rqana, na.rm=T)) |>
     pivot_wider(names_from = water_param, values_from = rqana) |>
     rename_with( ~ paste0("water_",tolower(.x)), -{{level}})
 }
+
+WATERQ_DEP <- sum_water(WATER_QB |> mutate(dep = substr(code_insee24, 1, 2)), dep)
 
 WATERQ_ARR <- sum_water(WATER_QB, arr24)
 
@@ -50,3 +52,4 @@ WATERQ_BV22 <- sum_water(WATER_QB, bv2022) |>
 
 write_feather(as.data.frame(WATERQ_ARR), "data/interim/arrondissements/water_quality.feather", compression = "zstd")
 write_feather(as.data.frame(WATERQ_BV22), "data/interim/bv2022/water_quality.feather", compression = "zstd")
+write_feather(as.data.frame(WATERQ_DEP), "data/interim/departement/water_quality.feather", compression = "zstd")

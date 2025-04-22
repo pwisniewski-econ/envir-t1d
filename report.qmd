@@ -69,6 +69,23 @@ import numpy as np
 
 # Data Presentation
 
+## Data provided by Sanofi 
+ 
+## Complementary Data
+
+To enrich the dataset provided by Sanofi, we searched for additional open-source data. We focused on the following databases:
+1. Météo France database: selected based on findings from existing studies suggesting a potential link between UV exposure and disease incidence.
+2. SIRENE database: used to complement the equipment dataset provided by the Sanofi teams.
+3. DPE database: incorporated as an additional source to enhance the existing datasets.
+4. INSEE database : used to get the influence of the mobility of persons between localities.
+5. GitHub repository gregoredavid/france-geojson: a collection of .geojson files representing French communes, districts, and departments, used for map rendering and geolocation purposes.
+6. Base INCA 3 : used for 
+
+
+## Medical Data from PMSI
+
+
+
 
 ```{python}
 df_arr_full = pd.read_feather("results_building/arrondissement-full.feather")

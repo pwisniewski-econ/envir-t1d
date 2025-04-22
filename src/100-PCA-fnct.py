@@ -30,13 +30,13 @@ def make_pca(
     pca = PCA(n_components=n_components)
 
     if col_to_remove is not None:
-        df = df.drop(col_to_remove, axis=1)
+        df2 = df.drop(col_to_remove, axis=1)
 
     elif col_for_PCA is not None:
-        df = df[col_for_PCA]
+        df2 = df[col_for_PCA]
 
     # On scale les variables de notre dataframe
-    df_scaled = scaler.fit_transform(df)
+    df_scaled = scaler.fit_transform(df2)
 
     # On applique la stratégie pour les valeurs manquantes
     df_imputed = pd.DataFrame(imputer.fit_transform(df_scaled))
@@ -48,9 +48,9 @@ def make_pca(
     df_pca = pd.DataFrame(
         pca_result,
         columns=[f'PC{i+1}' for i in range(pca_result.shape[1])],
-        index=df.index
+        index=df2.index
         )
-    df_pca.index = df_pca.index.astype(str)
+    df_pca['arr24'] = df_pca.index
 
     variance_expliquee = pca.explained_variance_ratio_
     loadings = pca.components_.T * np.sqrt(pca.explained_variance_)

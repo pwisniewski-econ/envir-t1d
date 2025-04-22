@@ -1136,13 +1136,14 @@ arrondissements['arr24'] = arrondissements['code'].apply(lambda x: reco_code(x))
 arrondissements = arrondissements[arrondissements['arr24'].notna()]
 
 pca_arr = pd.read_csv("results_analysis/pca_arr.csv")
-print(pca_arr.head())
 
+
+pca_arr['arr24'] = pca_arr['arr24'].apply(lambda x: refine_code(x, 3))
 mapping_function(
     map = arrondissements,
     df = pca_arr,
     key_to_merge = "arr24",
-    key_to_print= ['PC1'],
+    key_to_print= ['PC1','PC2'],
     key_to_pass = ["nom", "geometry", "code","code_arr","arr24"],
     forcing = True,
     color_map = "RdBu",

@@ -50,4 +50,6 @@ rsconnect/
 
 # Data Folder
 !data/README.MD
+data/*
 *.parquet
+report.pdf

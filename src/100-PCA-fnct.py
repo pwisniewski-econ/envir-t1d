@@ -1,3 +1,4 @@
+
 import numpy as np
 import pandas as pd
 
@@ -29,14 +30,16 @@ def make_pca(
     imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
     pca = PCA(n_components=n_components)
 
+    df2 = df.copy()
+
     if col_to_remove is not None:
-        df = df.drop(col_to_remove, axis=1)
+        df2 = df.drop(col_to_remove, axis=1)
 
     elif col_for_PCA is not None:
-        df = df[col_for_PCA]
+        df2 = df[col_for_PCA]
 
     # On scale les variables de notre dataframe
-    df_scaled = scaler.fit_transform(df)
+    df_scaled = scaler.fit_transform(df2)
 
     # On applique la stratégie pour les valeurs manquantes
     df_imputed = pd.DataFrame(imputer.fit_transform(df_scaled))
@@ -48,16 +51,15 @@ def make_pca(
     df_pca = pd.DataFrame(
         pca_result,
         columns=[f'PC{i+1}' for i in range(pca_result.shape[1])],
-        index=df.index
+        index=df['arr24']
         )
-    df_pca.index = df_pca.index.astype(str)
 
     variance_expliquee = pca.explained_variance_ratio_
     loadings = pca.components_.T * np.sqrt(pca.explained_variance_)
     loadings_df = pd.DataFrame(
         loadings,
         columns=[f'PC{i+1}' for i in range(loadings.shape[1])],
-        index=df.columns
+        index=df2.columns
         )
 
     return df_pca, variance_expliquee, loadings_df
@@ -86,7 +88,19 @@ pca_arr.to_csv("./results_analysis/pca_arr.csv")
 print("PCA exportée")
 load_arr.to_csv("./results_analysis/load_arr.csv")
 print("Loads exportés")
+df = pd.DataFrame(var_exp_arr)
+df.to_csv("./results_analysis/var_arr.csv")
+print("variance exportée")
 
+d = []
+for i in range(len(var_exp_arr)):
+    d.append({"pc" : i + 1, "var": var_exp_arr[i] })
+print(var_exp_arr)
+print(d)
+
+df = pd.DataFrame(d, index=None, columns=["pc","var"])
+df.to_csv("./results_analysis/var_arr.csv")
+print("variance exportée")
 
 # PCA POUR LES VARIABLES SOCIO ECONOMIQUES
 col_for_PCA = [
@@ -112,7 +126,17 @@ pca_arr_ses, var_exp_arr_ses, load_arr_ses = make_pca(
     n_components=10
     )
 
-pca_arr_ses.to_csv("./results_analysis/pca_arr.csv")
+pca_arr_ses.to_csv("./results_analysis/pca_arr_ses.csv")
 print("PCA exportée")
-load_arr_ses.to_csv("./results_analysis/load_arr.csv")
+load_arr_ses.to_csv("./results_analysis/load_arr_ses.csv")
 print("Loads exportés")
+
+d = []
+for i in range(len(var_exp_arr_ses)):
+    d.append({"pc" : i + 1, "var": var_exp_arr_ses[i] })
+
+df = pd.DataFrame(d, index=None, columns=["pc","var"])
+
+df.to_csv("./results_analysis/var_arr_ses.csv")
+print("variance exportée")
+

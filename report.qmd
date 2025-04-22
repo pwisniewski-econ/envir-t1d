@@ -59,6 +59,8 @@ import matplotlib.pyplot as plt
 import geopandas as gpd
 from plotnine import *
 from mizani.palettes import hue_pal
+
+import os
 ```
 
 \clearpage
@@ -943,6 +945,8 @@ import geopandas as gpd
 from matplotlib.patches import Patch
 import pandas as pd
 import numpy as np
+import os
+
 def mapping_function(
     map : gpd.GeoDataFrame,
     df : pd.DataFrame,
@@ -1131,13 +1135,14 @@ arrondissements['arr24'] = arrondissements['code'].apply(lambda x: reco_code(x))
 arrondissements = arrondissements[arrondissements['arr24'].notna()]
 
 pca_arr = pd.read_csv("results_analysis/pca_arr.csv")
-print(pca_arr.head())
+pca_arr['arr24'] = pca_arr['arr24'].apply(lambda x: refine_code(x, 3))
+
 
 mapping_function(
     map = arrondissements,
     df = pca_arr,
     key_to_merge = "arr24",
-    key_to_print= ['PC1'],
+    key_to_print= ['PC1','PC2','PC3','PC4','PC5','PC6'],
     key_to_pass = ["nom", "geometry", "code","code_arr","arr24"],
     forcing = True,
     color_map = "RdBu",
@@ -1147,6 +1152,8 @@ mapping_function(
     miss_color = 'grey'
 )
 ```
+
+### Selected variables
 
 \begin{longtable}{@{}p{3.5cm}>{\centering\arraybackslash}p{1.1cm}p{5.1cm}p{5.1cm}@{}}
 \toprule

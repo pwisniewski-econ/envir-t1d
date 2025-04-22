@@ -59,6 +59,9 @@ import numpy as np
 
 # General Introduction
 
+\refstepcounter{subsection}
+\subsection*{\thesubsection\quad ABC}
+
 Type 1 diabetes (T1D) is an autoimmune disease in which the body’s immune system attacks and destroys the insulin-producing beta cells in the pancreas. Without treatment, or in cases of poor disease management, T1D can lead to serious complications such as diabetic ketoacidosis and hypoglycemia. In France, around 4,000 new cases are diagnosed each year, and between 2018 and 2022, approximately 180,000 people were living with T1D. This rising incidence—estimated at an average annual rate of 2\% to 5\% in pediatric populations—suggests that T1D is a growing public health concern.
 
 The origin of T1D is complex, involving a combination of genetic predisposition and environmental triggers. Numerous environmental and socio-demographic factors have been associated with the development of the disease, although their impact may vary across regions and populations. In France, for instance, the prevalence of T1D is not evenly distributed across regions. [insert regional numbers in 2023] These regional disparities suggest that external factors—such as lifestyle, access to healthcare, socioeconomic conditions, and potential environmental exposures like pollution and climate—may influence disease risk. Identifying at-risk individuals early and gaining a clearer understanding of the specific environmental contributors to T1D remain key public health challenges. 
@@ -809,9 +812,13 @@ No other variables reach our choosen level of statistical significance (10%). No
 
 ## Full Regression Results (Poisson / Neg. Binomial)
 
+Below are the results of the main Poisson and Negative Binomial regressions with all coefficients and associated p-values reported. The model numbering follows the one described in  the report. \vspace{0.1cm}
+
 ```{python}
 #| results: asis
 #| output: asis
+#| tbl-cap: Main Regression Results (Full)
+
 
 print(build_table(
     MAIN_RESULTS[MAIN_RESULTS['description'].str.endswith(("arr24", "bv2022"))],
@@ -827,9 +834,18 @@ print(build_table(
 
 ## Poisson FE Table
 
+The table below presents the results from our fixed effects Poisson models. 
+
+1. Model (1) includes the entire population.
+2. Model (2) is restricted to departments with lower consumption of vitamin D rich foods.
+3. Model (3) is fitted on departments with higher consumption of vitamin D rich foods.
+
+P-values are reported below each coefficient. Standard errors (and corresponding p-values) are clustered at the department level to account for intra-departmental correlation. \vspace{0.5cm}
+
 ```{python}
 #| results: asis
 #| output: asis
+#| tbl-cap: Poisson Fixed Effects
 
 POISSON_FE = POISSON_FE.rename(columns={'nobs': 'N. Observations'})
 
@@ -843,10 +859,27 @@ print(build_table(
     ))
 ```
 
+
 \newpage 
 
 ## Common Support Hypothesis (DML)
+
+For our Double ML estimates to be valid, two key conditions must be satisfied:[^condi]
+ 
+1. **Common Support:** For every observed value of $X_i$ there must be a positive probability of receiving each level of the treatment variable $D$.
+2. **Correct Model Specification:** The machine learning algorithm must provide an adequate approximation of the true underlying functions 
+
+Note that, for proper causal inference, we would also need that: $Y(d) \perp  D|X$, that, conditional on $X$, treatment assignment $D$ is as good as random. 
+
+A simple and intuitive way to assess both conditions is to plot the predicted values against the observed values. If the points cluster tightly around the 45° line, this indicates both good predictive performance (suggesting appropriate model specification) and sufficient overlap in the covariate distributions across treatment groups.
+
+In our case many variables fit well this criterion, Assaults, Gyms, NO$_2$ and Fast Foods are mostly clustered arround the 45° line. PM10 concentration and Share of patients with tabacco addiction exebit a worse fit, but in the mid region we still have a reasonable predictive accuracy. 
+
+In our case, several variables exhibit good fit based on this criterion. In particular, assaults, gyms, NO$_2$ concentration, and fast food count show predicted values that closely follow the 45° line, suggesting strong model performance and common support. In contrast, PM$_{10}$ concentration and the share of patients diagnosed with tobacco addiction has a weaker fit, particularly at the extremes. Nevertheless, in the mid-range of the predicted values, predictive accuracy remains acceptable.
+
 ```{python}
+#| fig-cap: "Double ML Residuals"
+
 residuals = pl.read_csv('results_analysis/dml-residuals.csv')
 
 p = (
@@ -891,7 +924,7 @@ p = (
     + theme(
         legend_position='none',
         text=element_text(family="Times New Roman"),
-        figure_size=(6, 6.5),
+        figure_size=(6, 7),
         panel_spacing=.03
     )
     + labs(x="Real Value", y="Mean Prediction")
@@ -900,3 +933,4 @@ p = (
 
 p
 ```
+

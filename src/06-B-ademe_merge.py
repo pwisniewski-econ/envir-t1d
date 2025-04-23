@@ -1,21 +1,19 @@
-#!/usr/bin/env python3
-
 import polars as pl
 import pyarrow.feather as feather
 from pathlib import Path
 
 
-# Read supporting tables
+# Read support_tables
 table_passage = (
     pl.read_ipc("results_building/t_passage.feather")
     .select(["code_insee24", "arr24", "bv2022", "code_insee21"])
 )
 arr2com = pl.read_ipc("results_building/arr2com.feather")
 
-# Read full DPE dataset
+# full DPE dataset
 dpe_all = pl.read_ipc("data/interim/_ademe/dpe_all.feather")
 
-# Identify already replaced and building-associated IDs
+# building-associated IDs
 old_replaced = (
     dpe_all
     .select("ndperemplac")
@@ -101,7 +99,7 @@ dpe = (
     .join(grade_map_df, on="dpe_grade", how="left")
 )
 
-# Fill missing areas and replace missing year_built with period
+# Period building
 dpe = (
     dpe
     .with_columns([
@@ -153,7 +151,7 @@ OLD_DPE_DEP = (
     .sort("dep")
 )
 
-# Write output files
+# Export files
 for df_out, subdir in [
     (OLD_DPE_ARR, "arrondissements"),
     (OLD_DPE_BV, "bv2022"),

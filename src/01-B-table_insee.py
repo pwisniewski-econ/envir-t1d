@@ -1,8 +1,9 @@
+# ---- Import Libraries ----
 import pandas as pd
 from pathlib import Path
 
-# Title: Table de Passage PREMIUM
-# Script: France
+# Title: PREMIUM Passage Table
+# Script : France
 
 # Setup ----
 path_insee_tables = Path("data/external/insee-table_de_passage/")
@@ -56,7 +57,7 @@ app_com24 = (
 )
 
 # Yearly passage with Arrondissement ----
-# Merge, filter, reorder, and deduplicate
+# prepare for export (Merge, filter, reorder, and deduplicate)
 merged = (
     table_passage_df
     .merge(app_com24, left_on="code_insee24", right_on="code_insee24", how="left")

@@ -1,3 +1,4 @@
+# Import ----------
 import pandas as pd
 import pyarrow.feather as feather
 
@@ -9,17 +10,16 @@ TABLE_PASSAGE_DF = (
     .drop_duplicates()
 )
 
-# Read the diplomas data
-# Adjust `sep` if necessary depending on the CSV delimiter
+# Diplomas data reading
 DIPLOMES = pd.read_csv(
     "data/external/insee-diplomes/DS_RP_DIPLOMES_data.csv",
     sep=";", 
     low_memory=False
 )
-# Lowercase column names
+
 DIPLOMES.columns = DIPLOMES.columns.str.lower()
 
-# Filter for COM in 2021 and select relevant columns
+# Select columns
 DIP1 = (
     DIPLOMES
     .loc[(DIPLOMES.geo_object == "COM") & (DIPLOMES.time_period == 2021),
@@ -27,7 +27,7 @@ DIP1 = (
     .rename(columns={"geo": "code_insee24"})
 )
 
-# Map educ codes to match R case_when
+# Map educ codes
 def map_educ(code):
     if code.startswith("001T"): return "dip_001T"
     if code == "100_RP":      return "dip_100R"
@@ -52,11 +52,10 @@ def agreg_educ(df):
     )
     # Identify diploma columns
     dip_cols = [c for c in df_wide.columns if c.startswith("dip_")]
-    # Compute proportions: obs_value / total, replacing NA with 0
     for c in dip_cols:
         df_wide[c] = df_wide[c].fillna(0) / df_wide["total"]
 
-    # Compute sums of higher diplomas for M and F
+    # sums of higher diplomas M & F
     M = df_wide.query("sex == 'M'").copy()
     M["dip_sup_F"] = M["dip_500R"] + M["dip_600R"] + M["dip_700R"]
     M = M[["code_insee24", "dip_sup_F"]]
@@ -70,13 +69,13 @@ def agreg_educ(df):
     C["delta_educ"] = C["dip_sup_M"] - C["dip_sup_F"]
     C = C[["code_insee24", "delta_educ"]]
 
-    # Merge with totals (_T) and select final columns
+    # Merge
     total = df_wide.query("sex == '_T'")
     result = pd.merge(total, C, on="code_insee24", how="left")
     cols = ["code_insee24"] + dip_cols + ["delta_educ"]
     return result[cols]
 
-# Aggregate by arrondissement (arr24)
+# Aggregate by arrondissement
 DIP1_ARR = (
     pd.merge(DIP1, TABLE_PASSAGE_DF, on="code_insee24", how="left")
       .groupby(["arr24", "sex", "educ"], as_index=False)["obs_value"].sum()
@@ -84,7 +83,7 @@ DIP1_ARR = (
 )
 DIP1_ARR = agreg_educ(DIP1_ARR)
 DIP1_ARR = DIP1_ARR.rename(columns={"code_insee24": "arr24"})
-# Keep codes with fewer than 4 characters
+
 DIP1_ARR = DIP1_ARR[DIP1_ARR["arr24"].str.len() < 4]
 
 # Aggregate by BV2022
@@ -96,7 +95,7 @@ DIP1_BV22 = (
 DIP1_BV22 = agreg_educ(DIP1_BV22)
 DIP1_BV22 = DIP1_BV22.rename(columns={"code_insee24": "bv2022"})
 
-# Write outputs to Feather files with zstd compression
+# Export
 DIP1_ARR.to_feather(
     "data/interim/arrondissements/education.feather",
     compression="zstd"

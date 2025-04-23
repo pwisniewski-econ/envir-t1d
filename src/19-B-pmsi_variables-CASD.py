@@ -1,9 +1,11 @@
 import polars as pl
 
+# ---- Load Feather files ----
 prevalent = pl.read_ipc("results_building/t1d-individuals.feather")
 incident  = pl.read_ipc("results_building/t1d_e101-individuals.feather")
 all_ind   = pl.read_ipc("results_building/all-individuals.feather")
 
+# ---- VITAMINS ----
 malnutrition_codes = [f"E{n}" for n in range(40, 47)]
 
 das_spec = (

@@ -1,10 +1,10 @@
 import pandas as pd
 import numpy as np
 
-# Read the arrondissement‑to‑commune mapping
+# Read  arrondissement‑to‑commune mapping
 ARR2COM = pd.read_feather("results_building/arr2com.feather")
 
-# Dictionary of crime codes ↔ descriptions
+# Dictionary of crime codes
 DICO_CRIMES = pd.DataFrame({
     "var_crimes": [
         "coups", "trafic", "vols_av", "vols_sv", "cambriolages"
@@ -26,11 +26,11 @@ TABLE_PASSAGE_DF = (
     .first()
 )
 
-# Load and pre‑filter the raw crimes data
+# pre‑filter the raw crimes data
 CRIMES_DF = pd.read_parquet("data/external/miom-crimes/crimes23_geo24.parquet")
 CRIMES_DF = CRIMES_DF[CRIMES_DF["annee"] > 16]
 
-# Select/rename columns and clean up
+# Select & clean up
 CRIMES_DF = (
     CRIMES_DF[["CODGEO_2024", "annee", "faits", "classe", "unité.de.compte"]]
     .rename(columns={
@@ -45,7 +45,7 @@ CRIMES_DF["year"] = CRIMES_DF["year"] + 2000
 CRIMES_DF["crime_count"] = CRIMES_DF["crime_count"].fillna(0)
 CRIMES_DF = CRIMES_DF[CRIMES_DF["crimes_desc"].isin(DICO_CRIMES["crimes_desc"])]
 
-# Join to replace arr codes by commune codes where available
+# Replace arr codes by commune codes
 CRIMES_DF = CRIMES_DF.merge(
     ARR2COM,
     how="left",
@@ -62,7 +62,7 @@ CRIMES_DF["code_insee24"] = np.where(
 CRIMES_DF = CRIMES_DF.merge(DICO_CRIMES, on="crimes_desc", how="left")
 CRIMES_DF = CRIMES_DF.merge(TABLE_PASSAGE_DF, on="code_insee24", how="left")
 
-# === EXPORT READY DATA ===
+# === EXPORT DATA ===
 
 # By arrondissement (sum of counts)
 CRIMES_ARR = (
@@ -82,6 +82,6 @@ CRIMES_BV22 = (
     .reset_index()
 )
 
-# Write out to Feather with zstd compression
+# Export
 CRIMES_ARR.to_feather("data/interim/arrondissements/criminality.feather", compression="zstd")
 CRIMES_BV22.to_feather("data/interim/bv2022/criminality.feather", compression="zstd")

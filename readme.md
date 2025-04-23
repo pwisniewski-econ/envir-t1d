@@ -1,136 +1,137 @@
-# 🌍 Modélisation Écologique du Diabète de Type 1 en France Métropolitaine
+# 🌍 Ecological Modeling of Type 1 Diabetes in Metropolitan France
 
-## 🎯 Objectif du Projet
+## 🎯 Project Overview
 
-Ce projet, réalisé dans le cadre du **Business Data Challenge 2025** à l’ENSAE Paris, vise à identifier les **facteurs environnementaux, sociaux et économiques** associés à l’incidence du diabète de type 1 (DT1) chez les jeunes en France métropolitaine.  
-L’analyse repose sur des données hospitalières issues du **PMSI** et de jeux de données enrichis (pollution, climat, conditions de vie, équipements, etc.).
+This repository contains the full analytical pipeline of a project developed for the **Business Data Challenge 2025** at ENSAE Paris.  
+The goal is to identify and quantify **environmental, social, and economic factors** associated with the incidence of **Type 1 Diabetes (T1D)** among young individuals in metropolitan France.
+
+We combine **individual-level hospital data** from the French PMSI system with rich external datasets (pollution, weather, nutrition, socio-demographics, infrastructure), and apply causal inference techniques to analyze risk and protective factors.
 
 ---
 
-## 🗂️ Structure du dépôt
+## 🗂️ Repository Structure
 
 ```
 .
 ├── data/
-│   ├── external/                   # Données INSEE, INCA3, SIRENE...
-│   └── interim/                    # Données intermédiaires (arrondissements, BV)
+│   ├── external/                   # INSEE, SIRENE, INCA3, Météo France
+│   └── interim/                    # Intermediate datasets (arrondissements, BV2022)
 │
-├── results_building/               # Jeux de données nettoyés & enrichis
-│   ├── arr2com.feather
-│   ├── arrondissement-full.feather
-│   ├── arrondissement-flow.feather
-│   ├── bv2022-full.feather
-│   ├── bv2022-flow.feather
-│   ├── dep-full.feather
-│   ├── t_passage.feather
-│   ├── postal_converter.feather
-│   └── dictionary.md              # Dictionnaire des variables
+├── results_building/               # Cleaned and enriched datasets
+├── results_analysis/               # Final model results (CSV format)
 │
-├── results_analysis/               # Résultats finaux (modèles)
-│   ├── main_results.csv
-│   ├── poisson-fixed_effects.csv
-│   ├── dml-results.csv
-│   ├── dml-residuals.csv
-│   ├── t1d_levels_*.csv           # Incidence DT1 par niveau géographique
-│   ├── total_t1d.csv              # Comptages globaux
-│   ├── pca_arr.csv / pca_arr_ses.csv
-│   ├── var_arr.csv / var_arr_ses.csv
-│   └── readme.md
+├── scripts/                        # Feature engineering, data preparation
+│   ├── 01-B-table_insee.py
+│   ├── ...
+│   └── 22-Z-clean_final.py
 │
-├── scripts/
-│   ├── 01-B-table_insee.py         # Traitement des tables INSEE
-│   ├── 23-A-poisson-CASD.py        # Régressions Poisson & NB
-│   ├── 24-A-fixed_poisson-CASD.py  # Effets fixes (ensoleillement, climat)
-│   └── 25-double_ml-CASD.py        # Double Machine Learning
+├── src/
+│   ├── 01-B-table_insee.py        # Construction des tables INSEE
+|   .
+|   .      #processing tables and variables
+|   .
+│   ├── 23-A-poisson-CASD.py        # Python version of count models
+│   ├── 23-A-poisson-CASD.R         # ✅ R version used for CASD execution (Poisson/NB)
+│   ├── 24-A-fixed_poisson-CASD.py  # Python equivalent of FE Poisson
+│   ├── 24-A-fixed_poisson-CASD.R   # ✅ R version used in CASD (climate/vit. D models)
+│   └── 25-double_ml-CASD.R         # ✅ R-only script for Double ML (not feasible in Python)
 │
-├── report.pdf                      # Rapport (version provisoire)
-└── README.md
+├── report.pdf                      # Final report (in progress)
+└── README.md                       # You are here
 ```
 
----
-
-## 🔬 Méthodologie
-
-Ce projet vise l’**inférence causale** (et non prédictive). Trois approches :
-
-### 1. Régressions Poisson & Binomiale Négative
-- Niveaux géographiques : **arrondissements** & **bassins de vie (BV2022)**
-- Variables explicatives : climat, pollution, infrastructures, nutrition, précarité...
-- Réduction de dimension par **ACP** (PC1 à PC3)
-
-### 2. Modèles à Effets Fixes
-- Modèles mensuels au niveau départemental
-- Inclusion de **températures et ensoleillement** pour tester le rôle de la **vitamine D**
-- Tests sur sous-groupes : carence élevée vs faible
-
-### 3. Double Machine Learning (DML)
-- Méthode robuste pour estimer des effets causaux partiels
-- Régressions avec **forêts aléatoires** + cross-validation
-- Analyses séparées par sexe pour capturer des effets hétérogènes
+> ✅ **Note on modeling scripts**:  
+> - Scripts `23-A-poisson-CASD.R` and `24-A-fixed_poisson-CASD.R` were executed in **R** within the **CASD environment** to produce the official results used in the report.  
+> - Their corresponding `.py` versions are faithful **Python transcriptions**, included for documentation, readability, and reproducibility.  
+> - The Double Machine Learning model (`25-double_ml-CASD.R`) was developed **exclusively in R**, as the estimation is too complex and unstable in Python, leading to unreliable inference.
 
 ---
 
-## 📊 Résultats clés
+## 🧠 Methodology
 
-| Hypothèse | Observation |
-|-----------|-------------|
-| **Soleil & Vitamine D** | Chaque jour ensoleillé est associé à une **baisse de 3.8%** de l’incidence mensuelle de DT1 |
-| **Tabac** | Fortement associé à une hausse de l’incidence, surtout chez les hommes |
-| **Nutrition & Fast-Food** | Corrélation significative avec des nutriments spécifiques et la densité de fast-food |
-| **Contexte socio-économique** | Les **PCs issus de l’ACP** capturent des effets significatifs (éducation, emploi, etc.) |
+### 1. Poisson & Negative Binomial Regressions (R/Python)
+- Aggregated data at **arrondissement** and **BV2022** levels
+- Predictors: air quality, nutrition, water quality, public infrastructure, socio-demographics (via PCA)
+- Models estimated using **Poisson GLM** and **Negative Binomial**
 
----
+### 2. Fixed Effects Poisson Model (R/Python)
+- Monthly incidence data at **department** level
+- Investigates the **sunlight–vitamin D hypothesis**
+- Controls for unobserved heterogeneity with department fixed effects
 
-## 📁 Résultats disponibles
-
-| Fichier CSV                       | Description |
-|----------------------------------|-------------|
-| `main_results.csv`               | Régressions Poisson et NB |
-| `poisson-fixed_effects.csv`      | Modèles à effets fixes (ensoleillement, climat) |
-| `dml-results.csv`                | Résultats Double Machine Learning |
-| `dml-residuals.csv`              | Résidus DML pour évaluation |
-| `t1d_levels_*.csv`               | Incidence par département / arrondissement |
-| `pca_arr_ses.csv`                | Scores de précarité (ACP SES) |
-| `var_arr.csv`, `var_arr_ses.csv`| Statistiques descriptives |
+### 3. Double Machine Learning (R only)
+- Partial effect estimation of selected "treatments" (e.g. tobacco use, pollution)
+- Implements **DoubleMLPLR** with **Random Forests**
+- Computational complexity and interpretability considerations led to using only the R implementation
 
 ---
 
-## ⚙️ Reproduire l’analyse
+## 📈 Key Results
 
-1. Installer l’environnement :
+| Variable / Factor               | Effect on T1D | Notes |
+|--------------------------------|---------------|-------|
+| 🌞 Sunlight exposure            | ⬇ -3.8%/day   | Strong evidence from fixed effects models |
+| 🚬 Tobacco addiction (Males)   | ⬆            | Significant and robust across models |
+| 🥗 Vitamin D deficiency         | ⬆            | Consistent with theory and sunlight findings |
+| 🍔 Fast-food access             | ⬆            | Moderately significant in DML |
+| 🧂 Calcium deficiency           | ⬆            | Observed in Poisson and NB |
+| 🛑 Assaults (proxy for stress)  | ⬆            | Stronger in females |
+| 🌫️ NO₂ concentration           | ⬇ (weak)     | Lost significance under DML |
+
+---
+
+## 🔁 How to Reproduce (Python version)
+
+> ⚠️ Due to confidentiality rules, **PMSI hospital data is not shared publicly**. Scripts below assume access.
+
+1. Set up Python environment:
 ```bash
 conda create -n dt1-env python=3.10
 conda activate dt1-env
 pip install -r requirements.txt
 ```
 
-2. Lancer les scripts dans l’ordre :
+2. Run scripts:
 ```bash
+# Data cleaning & preparation
 python scripts/01-B-table_insee.py
-python scripts/23-A-poisson-CASD.py
-python scripts/24-A-fixed_poisson-CASD.py
-python scripts/25-double_ml-CASD.py
+...
+
+# Optional model replication in Python
+python src/23-A-poisson-CASD.py
+python src/24-A-fixed_poisson-CASD.py
 ```
 
-> ⚠️ **Attention** : les données PMSI sont confidentielles et ne peuvent pas être partagées publiquement.
+3. Run modeling in R (preferred / official results):
+```r
+# Main causal models
+source("src/23-A-poisson-CASD.R")
+source("src/24-A-fixed_poisson-CASD.R")
+source("src/25-double_ml-CASD.R")
+```
 
 ---
 
-## 👥 Équipe projet
+## 👨‍🔬 Project Team
 
-- Éléa Bordais – ENSAE Paris
-- Ismaël Dembele – ENSAE Paris
-- Paul Toudret – ENSAE Paris
-- Patryk Wiśniewski – ENSAE Paris
+- **Éléa Bordais** – ENSAE Paris  
+- **Ismaël Dembele** – ENSAE Paris  
+- **Paul Toudret** – ENSAE Paris  
+- **Patryk Wiśniewski** – ENSAE Paris  
 
-**Encadrement :**
-- Pr. Azadeh Khaleghi (ENSAE Paris)
-- Partenaire : **Sanofi** (Noémie Allali, Olivia Carnapete, Thomas Séjourné)
+Supervised by **Professor Azadeh Khaleghi**  
+With the support of **Sanofi France**: Noémie Allali, Olivia Carnapete, Thomas Séjourné
 
 ---
 
-## 📚 Remerciements
+## 🙏 Acknowledgements
 
-Merci à **Sanofi** pour leur accompagnement, ainsi qu’à nos encadrants pour leur soutien scientifique et méthodologique tout au long du challenge.
+We thank **Sanofi** for providing data and expert guidance, and the **CASD & DataStorm** teams for enabling secure data access. Special thanks to our academic coach for methodological direction throughout the project.
+
+---
+
+## 📄 License
+
+All materials are provided for academic and non-commercial purposes only.
 
 ---

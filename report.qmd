@@ -5,9 +5,10 @@ execute:
   warning: false
 format:
     pdf: 
+        fig-format: pdf
         number-sections: true
         block-headings: false
-        fig-format: pdf
+        fig-align: center
         code-block-border-left: "#5b5b5b"
         code-block-bg: "#fafafa "
         highlight-style: pygments
@@ -42,6 +43,8 @@ format:
             \usepackage{times}
             \usepackage{sectsty}
             \usepackage[backend=biber, url=false, style=authoryear, sorting=ydnt]{biblatex}
+            \addbibresource{ressources/bib/t1d_ascii.bib}
+
 ---
 
 
@@ -61,61 +64,81 @@ from plotnine import *
 from mizani.palettes import hue_pal
 
 import os
+
+import pandas as pd
+from plotnine import (
+    ggplot, aes, geom_point, geom_errorbar, geom_vline,
+    facet_wrap, theme_minimal, theme, element_text, labs,
+    geom_errorbarh, theme_classic,theme_bw, scale_color_brewer,
+    geom_abline
+)
+from matplotlib import font_manager
+import matplotlib.pyplot as plt
+
+# 1. Register your Times New Roman font
+font_path = "ressources/fonts/Times-New-Roman.otf"
+font_manager.fontManager.addfont(font_path)
+# Use it everywhere in matplotlib/plotnine:
+plt.rcParams['font.family'] = 'Times New Roman'
+plt.rcParams['figure.dpi'] = 300
+
 ```
 
 \clearpage
 
 # General Introduction
 
-\refstepcounter{subsection}
-\subsection*{\thesubsection\quad ABC}
+Type 1 diabetes (T1D) is an autoimmune disease characterized by the immune system's destruction of insulin-producing beta cells in the pancreas. Without effective management, T1D can lead to severe complications, including diabetic ketoacidosis and hypoglycemia. In France, the disease represents a significant public health issue, with approximately 4,000 new diagnoses annually and an estimated 180,000 individuals living with T1D between 2018 and 2022. The rising incidence, particularly the 4% average annual increase observed in pediatric populations according to Santé publique France, underscores its growing impact.  
 
-Type 1 diabetes (T1D) is an autoimmune disease in which the body’s immune system attacks and destroys the insulin-producing beta cells in the pancreas. Without treatment, or in cases of poor disease management, T1D can lead to serious complications such as diabetic ketoacidosis and hypoglycemia. In France, around 4,000 new cases are diagnosed each year, and between 2018 and 2022, approximately 180,000 people were living with T1D. This rising incidence—estimated at an average annual rate of 2\% to 5\% in pediatric populations—suggests that T1D is a growing public health concern.
+The origin of T1D is understood to be multifactorial, involving genetic predisposition interacting with environmental triggers. While numerous environmental and socio-demographic factors have been linked to T1D development, their influence can vary significantly across different regions and populations. In France, the prevalence of T1D exhibits notable regional disparities, suggesting that external factors, such as lifestyle, healthcare access, socioeconomic conditions, pollution, and climate, may modulate disease risk. Consequently, the early identification of at-risk populations and a clearer understanding of specific environmental contributors remain critical public health challenges.  
 
-The origin of T1D is complex, involving a combination of genetic predisposition and environmental triggers. Numerous environmental and socio-demographic factors have been associated with the development of the disease, although their impact may vary across regions and populations. In France, for instance, the prevalence of T1D is not evenly distributed across regions. [insert regional numbers in 2023] These regional disparities suggest that external factors—such as lifestyle, access to healthcare, socioeconomic conditions, and potential environmental exposures like pollution and climate—may influence disease risk. Identifying at-risk individuals early and gaining a clearer understanding of the specific environmental contributors to T1D remain key public health challenges. 
+This study focuses on inference rather than prediction, aiming to explain the relationships between environmental, social, and economic factors and the incidence of T1D in France. We seek to assess how exposures like air pollution, variations in healthcare service access, and socio-demographic variables potentially influence the likelihood of developing T1D across different geographical areas.  
 
-Our study focuses on inference rather than prediction. Our goal is to better understand the relationship between environmental, social and economic factors and the incidence of T1D. We aim to assess how various exposures—such as air pollution, access to healthcare services, or socio-demographic variables—may influence the likelihood of developing T1D in different districts. [to develop]
-
-To conduct our analysis, we combine individual-level hospital data from the French PMSI (Information systems medicalization program) with a wide range of open-access external datasets. We received additional data from Sanofi, including environmental variables such as air pollution and gas emissions, as well as socio-economic indicators at the district level. To capture the local environment more precisely, we integrated SIRENE data, which provides information on both commercial (e.g., food stores, fitness centers) and public infrastructure. We further enrich our dataset with meteorological data from Météo France. 
-
-
+To achieve this, our analysis integrates individual-level hospital data from the French Programme de Médicalisation des Systèmes d'Information (PMSI) with diverse open-access external datasets which includes some data that was provided by Sanofi. 
 
 \newpage 
 
 # Literature Review
 
-For our project, it is crucial to understand what the existing literature says about environmental and social risk factors for Type 1 diabetes. Reviewing this literature help us identify the most studied factors and the remaining research gaps. This section summarizes key findings across several factors, from air pollution and nutrition to stress and socioeconomic conditions.
+For any observational study, it is important to understand what are the main insights from the existing literature. A review of the literature allows us to identify what variables matter in the context of the study of type 1 diabetes and to identify possible research gaps. This section summarizes key findings across several factors, from air pollution and nutrition to stress and socioeconomic conditions.
+
+## Air pollution
 
 Air pollution is among the most studied environmental factors in recent years regarding the risk of T1D onset, especially in children. ozone (O3), nitrogen oxide (NOx) and particulate matter (PM10 and PM2.5) are known for their effects on inflammation, oxidative stress and immune regulation. Numerous studies support that exposure to these air pollutants during pregnancy or early life could contribute to higher risk of developing T1D. 
-A Canadian study carried out by Elten et al. (2020) examined around 750k children and found that maternal exposure to ozone during first trimester of pregnancy is associated to increased risk of early-onset pediatric diabetes. A study in Israel by Taha-Khalde et al (2021) supported this result by showing that children whose mothers were exposed to high concentration of O3 (third and fourth quartiles) during pregnancy had higher chances of developing T1D. However, Taha-Khalde also investigated the role of PM10 and PM2.5 exposure but found no clear associations after adjusting for socioeconomic status and meteorological conditions. A study carried out in California by Hathout et al. (2006) also found that children with T1D had higher cumulative exposure to O3 from birth, which reinforces the potential association between long-term ozone exposure and autoimmune diabetes.
-Finally, in Poland, Michalska et al. (2020) explored regional variation in air pollution and T1D incidence. They found a significant positive correlation between annual average PM10 levels and incidence of T1D among children aged between 0 and 18. However, they found no significant correlation between NO2 levels and incidence of T1D in this population. The literature seems to suggest that NO2 plays a secondary role compared to oxidative pollutants like ozone and fine particulate matter. 
+A Canadian study carried out by \cite{elten_ambient_2020} examined around 750k children and found that maternal exposure to ozone during first trimester of pregnancy is associated to increased risk of early-onset pediatric diabetes. A study in Israel by \cite{taha-khalde_air_2021} supported this result by showing that children whose mothers were exposed to high concentration of O3 (third and fourth quartiles) during pregnancy had higher chances of developing T1D. However, Taha-Khalde also investigated the role of PM10 and PM2.5 exposure but found no clear associations after adjusting for socioeconomic status and meteorological conditions. A study carried out in California by \cite{hathout_air_2006} also found that children with T1D had higher cumulative exposure to O3 from birth, which reinforces the potential association between long-term ozone exposure and autoimmune diabetes.
+Finally, in Poland, \cite{michalska_gaseous_2020} explored regional variation in air pollution and T1D incidence. They found a significant positive correlation between annual average PM10 levels and incidence of T1D among children aged between 0 and 18. However, they found no significant correlation between NO2 levels and incidence of T1D in this population. The literature seems to suggest that NO2 plays a secondary role compared to oxidative pollutants like ozone and fine particulate matter. 
 
-Another widely researched factor is vitamin D, it is seen as a protective factor because of its role in the immune system and pancreatic function. The active form of vitamin D (1,25(OH)2D3) attaches to receptors (VDR) present immune cells and beta cells, where it helps regulate immune responses by limiting inflammation and promoting immune tolerance, which could reduce the likelihood of the immune system attacking the beta-cells, as in T1D. Also, vitamin D contributes to calcium balance, essential for proper insulin secretion. 
-Many observational studies suggest that vitamin D supplementation during childhood might lower the risk on developing T1D. A large Finnish birth cohort study by Hyppönen et al. (2001) found that supplementation of vitamin D during childhood was associated with an 88% lower risk of developing T1D compared to children who didn’t receive vitamin D. The EURODIAB case control-study confirmed this result, showing vitamin D supplementation in infancy was associated with 33% lower odds of developing T1D later in life. A meta-analysis – conducted by Zipitis and Akobeng (2008) – using five studies supported those findings, showing that children with supplementation of vitamin D had 29% lower risk of developing T1D compared to other children. 
-Vitamin D is primarily produced in the skin through exposure to ultraviolet B (UVB) rays from sunlight, making sun exposure an essential component for maintaining high level of vitamin D. Geographic differences in UVB quantities – determined by latitude and cloud coverage – can therefore influence vitamin D status in population. A studied by Mohr et al. (2008) carried out during several years among children aged 0-14 in 51 regions worldwide found that higher regional USB irradiance was strongly associated with lower incidence rates of T1D in children. The study observed a clear variation with latitude: regions closer to the equator, with greater UVB exposure, had significantly lower T1D incidence compared to regions farther from the equator.
-Despite consistent results across numerous studies, these results don’t establish a causal relationship between supplementation of vitamin D during childhood and development of T1D. Most studies are observational and rely on retrospective data, often based on parental recall of supplementation, without objective measurements of vitamin D levels. There are still many questions about ideal dose, timing and duration and heterogeneity effects. 
+## Vitamin D and sun exposure
 
+Another widely researched factor is vitamin D, it is seen as a protective factor because of its role in the immune system and pancreatic function. The active form of vitamin D (1,25(OH)2D3) attaches to receptors (VDR) present immune cells and beta cells, where it helps regulate immune responses by limiting inflammation and promoting immune tolerance.  Many observational studies suggest that vitamin D supplementation during childhood might lower the risk of developing T1D. A large Finnish birth cohort study by \cite{hypponen_intake_2001} found that supplementation of vitamin D during childhood was associated with an 88% lower risk of developing T1D compared to children who didn't receive vitamin D. The EURODIAB case control-study confirmed this result, showing vitamin D supplementation in infancy was associated with 33% lower odds of developing T1D later in life. 
+Vitamin D is primarily produced in the skin through exposure to ultraviolet B (UVB) rays from sunlight, making sun exposure an essential component for maintaining high level of vitamin D. Geographic differences in UVB quantities, determined by latitude and cloud coverage, can therefore influence vitamin D status in population. A studied by \cite{mohr_association_2008} carried out during several years among children aged 0-14 in 51 regions worldwide found that higher regional UVB irradiance was strongly associated with lower incidence rates of T1D in children. The study observed a clear variation with latitude: regions closer to the equator, with greater UVB exposure, had significantly lower T1D incidence compared to regions farther from the equator.
+Despite consistent results across numerous studies, these results don't establish a causal relationship between supplementation of vitamin D during childhood and development of T1D. Most studies are observational and rely on retrospective data, often based on parental recall of supplementation, without objective measurements of vitamin D levels. There are still many questions about ideal dose, timing and duration and heterogeneity effects. 
 
-Dietary factors are known to have an impact on the onset of Type 2 diabetes, but they have also been examined in relation to T1D, especially through its impact on immune development and pancreatic beta-cell stress. Several dietary factors during pregnancy, infancy or childhood could contribute to either increasing or reducing risk of developing Type 1 diabetes.  Early exposure to certain foods, such as cow’s milk or processed meats, has been associated with a higher risk, possibly due to the presence of inflammatory compounds like nitrites and advanced glycation end-products that may promote beta-cell damage​ (Virtanen 2016). 
-Many prospective and case-control studies have investigated the effects of diet on the onset of T1D. Early introduction of cow’s milk and short breastfeeding duration have both been associated with an increased risk of islet autoimmunity and T1D, particularly when they occur in the first months of life​ (Virtanen 2016). In a Swedish cohort-study, short breastfeeding and early cow’s milk exposure were associated with higher risk of autoantibody development. Furthermore, early introduction of solid foods has also been linked to a higher risk of islet autoimmunity in genetically susceptible children. A randomized trial found that giving infants a hydrolyzed formula instead of a standard cow’s milk–based formula in the first 6-8 months of life could delay the emergence of islet cell autoimmunity. 
-According to studies, diet continues to play a role in older children. A Swedish study found that children developing T1D had significantly higher intakes of energy, carbohydrates, and especially sugars compared to other children​. High sugar consumption remained a significant risk factor after adjusting for total energy intake, suggesting a specific impact beyond general overnutrition. Moreover, Traversi et al (2020) conducted a small study on children of Italian origin and migrant families in Italy, which included 40 cases and 56 controls. They observed a modest but significant association between higher total caloric intake and the likelihood of developing T1D. In particular, high intake of protein, fat, or carbohydrates individually was also associated with a slightly increased risk of the disease. 
-Evidence suggests that family dietary habits - especially those influencing early nutrition and energy intake - could play a role in shaping T1D risk. However, a clear causal relationship between diet and T1D has not been established. Most studies are observational and may be influenced by bias or confounding factors.
+## Dietary factors
 
+Dietary factors are known to have an impact on the onset of Type 2 diabetes, but they have also been examined in relation to T1D, especially through its impact on immune development and pancreatic beta-cell stress. Several dietary factors during pregnancy, infancy or childhood could contribute to either increasing or reducing risk of developing Type 1 diabetes.  Early exposure to certain foods, such as cow's milk or processed meats, has been associated with a higher risk, possibly due to the presence of inflammatory compounds like nitrites and advanced glycation end-products that may promote beta-cell damage​ (\cite{virtanen_dietary_2016}). 
+Many prospective and case-control studies have investigated the effects of diet on the onset of T1D. Early introduction of cow's milk and short breastfeeding duration have both been associated with an increased risk of islet autoimmunity and T1D, particularly when they occur in the first months of life​ (\cite{virtanen_dietary_2016}). Furthermore, early introduction of solid foods has also been linked to a higher risk of islet autoimmunity in genetically susceptible children. A randomized trial found that giving infants a hydrolyzed formula instead of a standard cow's milk–based formula in the first 6-8 months of life could delay the emergence of islet cell autoimmunity. 
+According to studies, diet continues to play a role in older children. A Swedish study found that children developing T1D had significantly higher intakes of energy, carbohydrates, and especially sugars compared to other children​. High sugar consumption remained a significant risk factor after adjusting for total energy intake, suggesting a specific impact beyond general overnutrition. Moreover, \cite{traversi_risk_2020} conducted a small study on children of Italian origin and migrant families in Italy, which included 40 cases and 56 controls. They observed a modest but significant association between higher total caloric intake and the likelihood of developing T1D. In particular, high intake of protein, fat, or carbohydrates individually was also associated with a slightly increased risk of the disease. 
+Evidence suggests that family dietary habits - especially those influencing early nutrition and energy intake - could play a role in shaping T1D risk. 
 
-In addition to physical exposures, psychological stress has been proposed as a possible trigger for T1D, particularly when stress occurs during sensitive developmental periods. Two studies have studied this relation in the context of acute, traumatic life events. Zung et al. (2012) reported a significant increase in T1D incidence among Israeli children following the Second Lebanon War, suggesting that important levels of psychological stress may act as a trigger​. Virk et al. (2010) found that children whose mothers experienced the death of a close family member during pregnancy - particularly in cases of sudden or traumatic loss, such as the death of a partner or a child - were at greater risk of developing T1D, with the association being especially strong among girls​. 
-However, the idea that « post-traumatic » type 1 diabetes exists remain controversial. The literature is inconsistent, some studies report a clear link between traumatic life events and diabetes onset, and other studies, including studies conducted in high-prevalence countries like Sweden, find no such association. (Littorin et al. 2001) 
-A key limitation of the literature on the relation between stress and type 1 diabetes is the narrow focus on extreme events such as wars or losses of loved ones. Few studies have focused on chronic and everyday stressors such as school pressure, neighborhood criminality or family instability and their influence on developing T1D. Furthermore, most studies don’t include physiological data (cortisol levels or immune markers), making it difficult how stress contribute to autoimmune processes. 
+## Psychological stress
 
+In addition to physical exposures, psychological stress has been proposed as a possible trigger for T1D, particularly when stress occurs during sensitive developmental periods. Two studies have studied this relation in the context of acute, traumatic life events. \cite{zung_increase_2012} reported a significant increase in T1D incidence among Israeli children following the Second Lebanon War, suggesting that important levels of psychological stress may act as a trigger​. \cite{virk_early_2010} found that children whose mothers experienced the death of a close family member during pregnancy - particularly in cases of sudden or traumatic loss, such as the death of a partner or a child - were at greater risk of developing T1D, with the association being especially strong among girls​. 
+However, the idea that "post-traumatic " type 1 diabetes exists remain controversial. The literature is inconsistent, some studies report a clear link between traumatic life events and diabetes onset, and other studies, including studies conducted in high-prevalence countries like Sweden, find no such association (\cite{littorin_family_2001}).
+A key limitation of the literature on the relation between stress and type 1 diabetes is the narrow focus on extreme events such as wars or losses of loved ones. Few studies have focused on chronic and everyday stressors such as school pressure, neighborhood criminality or family instability and their influence on developing T1D. 
 
-Tobacco use and exposure have also raised concerns regarding onset of T1D, due to their known effects on insulin secretion and pancreatic beta-cell function. While smoking is well known for its effects on insulin resistance, evidence also points to its role in impairing insulin secretion. A Japanese cohort study by Morimoto et al. (2013), which followed around 2k men over several years, found that current smokers were nearly twice as likely to develop impaired insulin secretion compared to men who never smoke. The risk increased in a dose-dependent manner with the number of pack-years smoked, suggesting a cumulative effect. Interestingly, smoking was not significantly associated with insulin resistance in this cohort, reinforcing the idea that smoking may directly damage beta cells rather than simply altering insulin sensitivity​. 
-A Swedish study confirmed those results showing that smokers had significantly lower beta-cell function that people who had never smoked, indicating reduced insulin secretion capacity. Notably, this association was not observed in women, suggesting possible sex-specific biological responses to tobacco exposure​. The mechanism at stake here is that smoking is associated with increased oxidative stress and inflammation, both of which could contribute to beta-cell apoptosis or dysfunction. 
+## Tobacco use and exposure
+
+Tobacco use and exposure have also raised concerns regarding onset of T1D, due to their known effects on insulin secretion and pancreatic beta-cell function. While smoking is well known for its effects on insulin resistance, evidence also points to its role in impairing insulin secretion. A Japanese cohort study by \cite{morimoto_impact_2013}, which followed around 2k men over several years, found that current smokers were nearly twice as likely to develop impaired insulin secretion compared to men who never smoke. The risk increased in a dose-dependent manner with the number of pack-years smoked, suggesting a cumulative effect. Interestingly, smoking was not significantly associated with insulin resistance in this cohort, reinforcing the idea that smoking may directly damage beta cells rather than simply altering insulin sensitivity​. 
+A Swedish study confirmed those results showing that smokers had significantly lower beta-cell function that people who had never smoked, indicating reduced insulin secretion capacity. Notably, this association was not observed in women, suggesting possible sex-specific biological responses to tobacco exposure​ (\cite{ostgren_associations_2000})
 While these studies show that smoking can impair beta-cell function, they do not clearly link smoking to the development of T1D itself. Most research focuses on adults and does not address early-life exposure, when T1D typically begins.
 
+## Socioeconomic factors
 
-Lastly, socioeconomic factors are increasingly studied as potential non-genetic contributors to T1D. Several studies suggest socioeconomic factors can influence access to healthcare and exposure to environmental factors and behavioral risk factors, which may affect onset of T1D. The study by Traversi et al. (2020) showed that children receiving regular health check-ups were significantly less likely to develop the disease (odds ratio of 0.37). This finding shows the importance of access to healthcare and early monitoring. 
-Further analyses support the idea that regional deprivation is associated with higher T1D incidence. A large study by Buchmann et al. (2023), using registry data from nearly 25,000 children in Germany, found that districts with very high socioeconomic deprivation (as measured by the German Index of Socioeconomic Deprivation, GISD) had a higher incidence of T1D compared to those with very low deprivation. Another study carried in Germany by Prel et al. (2007) showed that higher deprivation scores – based on income, education and professional training – were significantly associated with increased T1D incidence across regions. The study also reported a clear linear trend, with incidence rising as deprivation increased. 
+Lastly, socioeconomic factors are increasingly studied as potential non-genetic contributors to T1D. Several studies suggest socioeconomic factors can influence access to healthcare and exposure to environmental factors and behavioral risk factors, which may affect onset of T1D. The study by \cite{traversi_risk_2020} showed that children receiving regular health check-ups were significantly less likely to develop the disease. 
+Further analyses support the idea that regional deprivation is associated with higher T1D incidence. A large study by \cite{buchmann_inzidenz_2023}, using registry data from nearly 25,000 children in Germany, found that districts with very high socioeconomic deprivation (as measured by the German Index of Socioeconomic Deprivation, GISD) had a higher incidence of T1D compared to those with very low deprivation. Another study carried in Germany by \cite{du_prel_socioeconomic_2007} showed that higher deprivation scores – based on income, education and professional training – were significantly associated with increased T1D incidence across regions. The study also reported a clear linear trend, with incidence rising as deprivation increased. 
 It is common to use income of the household, education of parents to measure socioeconomic status. However, they may act as proxies for more complex underlying mechanisms. These includes differences in health behaviors, nutrition quality, stress exposure, and healthcare access, which may not be fully captured by standard indicators. Low parental education could be associated with reduced health literacy, leading to delayed recognition of early T1D symptoms or poor diabetes management. Income may reflect a family's ability to access healthy food, stable housing and preventive care, which are factors that could affect the likelihood of developing T1D. 
-Despite the associations found in these studies, there is no definitive evidence that low socioeconomic status directly causes T1D. Most available studies are observational and cannot account for individual-level confounding or causal mechanisms. Moreover, results are not always consistent across countries and time periods, possibly due to differences in healthcare systems, social safety nets, and population genetics.
+Despite the associations found in these studies, there is no definitive evidence that low socioeconomic status directly causes T1D. Most available studies are observational and cannot account for individual-level confounding or causal mechanisms. Moreover, results are not always consistent across countries and time periods, possibly due to differences in healthcare systems, social safety nets and population genetics.
 
 
 
@@ -123,83 +146,160 @@ Despite the associations found in these studies, there is no definitive evidence
 \newpage
 
 # Data Presentation
+
+## Phase 1: *Map of France*
+The data preparation phase of this project was conducted in two stages. Initially, we focused on compiling a comprehensive dataset describing France across various geographical levels. The data were sourced from multiple public repositories, all of which are documented in the accompanying README files.
+
+The dataset was constructed at three distinct geographical levels:
+
+1. **Arrondissements administratifs:** This is the primary unit of analysis, comprising 333 (315 without Corsica or DOM-TOM) subdivisions of French departments. These units are sufficiently large to mitigate issues related to sparsity, particularly given the relative rarity of T1D cases.
+2. **Bassins de vie:** Defined by INSEE, these units are designed to capture functional living areas based on access to amenities. With over 1,700 such units in France, they offer a finer spatial granularity and are arguably less arbitrary than administrative boundaries.
+3. **Departments:** In certain analyses, even arrondissements are too small. For these cases, we aggregate data at the departmental level to ensure sufficient sample sizes.
+
+The variables included in the dataset span a wide array of domains, including meteorological data, air and water quality, socio-economic indicators, crime rates, housing quality and energy efficiency, access to social housing, and business establishment counts. Detailed documentation of these variables is available in the corresponding README files.
+
+### PCA on all variables
+
+Despite efforts to retain only contextually relevant variables during preprocessing, approximately 120 features per geographical level were retained. This high dimensionality posed challenges for preliminary analyses. Therefore, we conducted an exploratory Principal Component Analysis (PCA) to identify the primary axes of variation across our *Map of France*. This approach not only facilitated the descriptive analysis but also informs subsequent variable selection.
+
+We report PCA results for the arrondissement level, as the principal components observed were broadly consistent across both the arrondissement and bassin de vie levels.
+
 ```{python}
-total_t1d_e101 = pd.read_csv("results_analysis/total_t1d_e101.csv")
-total_t1d = pd.read_csv("results_analysis/total_t1d.csv")
+#| fig-cap: PCA Explained Variance, All Variables
+#| fig-format: pdf
+
+df = pd.read_csv("results_analysis/var_arr.csv", delimiter=',', names=['pc','var'], header=0)
+
+df['CumulativeVariance'] = df['var'].cumsum()
+
+(
+    ggplot(df, aes(x='pc', y='CumulativeVariance')) +
+    geom_line(linetype='dashed') +
+    geom_point(size=3) +
+    labs(
+        x='Number of components',
+        y='Cumulative explained variance'
+    ) +
+    theme_minimal(base_size=14) +
+    theme(
+    legend_position='none',
+    text=element_text(family="Times New Roman"),
+    figure_size=(5, 2.8),
+    panel_spacing=.03
+    ) +
+    scale_x_continuous(breaks=range(1, len(df)+1))
+)
+```
+
+The plot above illustrates the proportion of variance explained by each principal component (PC). For the purposes of descriptive analysis, the results are acceptable: the first four components account for approximately 60% of the total variance. However, even after including ten components, the cumulative explained variance reaches only around 80%, which is insufficient for use in predictive modeling. Therefore, this PCA is employed strictly for exploratory and descriptive purposes.
+
+The main axis of variations we identified with variable loading are the size of an arrondissement (dim. 1), accessibility of services (dim. 2), wealth (dim. 3), housing and weather (dim. 4) and air quality (dim. 5). Some variables are very often highly relevant and as such they should be given a somewhat heavier consideration in the selection process.
+
+The most influential variable loadings are presented along a cartography of France along the predefined axis in appendix A.1.
+
+### PCA for social and economical variables
+
+Despite the limitations of global PCA for modeling, we believed that dimension reduction could be more effective when applied to thematic subsets of variables, particularly those related to socio-economic status (SES). Drawing from established practices in sociology, we aimed to condense SES indicators into a small number of interpretable dimensions.
+
+```{python}
+#| fig-cap: PCA Explained Variance, SES Variables
+
+df = pd.read_csv("results_analysis/var_arr_ses.csv", delimiter=',', names=['pc','var'], header=0)
+
+df['CumulativeVariance'] = df['var'].cumsum()
+
+(
+    ggplot(df, aes(x='pc', y='CumulativeVariance')) +
+    geom_line(linetype='dashed') +
+    geom_point(size=3) +
+    labs(
+        x='Number of components',
+        y='Cumulative explained variance'
+    ) +
+    theme_minimal(base_size=12) +
+    theme(
+    legend_position='none',
+    text=element_text(family="Times New Roman"),
+    figure_size=(5, 2.8),
+    panel_spacing=.03
+    ) + 
+    scale_x_continuous(breaks=range(1, len(df)+1))
+)
+
+```
+
+This approach proved successful: nearly 90% of the variance in SES variables was captured by just three principal components, each of which exhibits clear interpretability:
+
+1. **PC1:** Captures arrondissements characterized by high levels of educational attainment and high income levels.
+2. **PC2:** Represents arrondissements with relatively low educational attainment but still moderately high wages.
+3. **PC3:** Reflects arrondissements with low educational attainment, with minimal contribution from income-related variables.
+
+Given the interpretability of these components, they will be retained for inclusion in our econometric models. The same exercise was conducted at the bassins de vie level, and it proved equally successful.
+
+1. **PC1:** Captures BV characterized by high levels of educational attainment and high income levels.
+2. **PC2:** Represents BV with relatively low educational but with a high first decile and median income.
+3. **PC3:** Reflects BV with average educational attainment and low income inequalities.
+
+\newpage 
+
+## Phase 2: Health Data
+
+Through access to PMSI health records via the *CASD* secure platform, we were able to identify patients affected by T1D using both principal and associated diagnosis codes ranging from E100 to E109. This subset constitutes what we refer to as the prevalent population, comprising over 100,000 individuals who had at least one hospital visit associated with a T1D diagnosis. While informative, prevalent populations offer limited insight into risk factors due to several confounding dynamics. Patients may relocate across geographical units over time, and, crucially, the behavior and environment of diagnosed individuals often differ significantly from those who are undiagnosed, introducing concerns of reverse causality in modeling efforts.
+
+Although the datasets are rich in clinical detail, they are limited temporally to 2023. This restricts our ability to robustly estimate incidence rates based on newly diagnosed cases. Given this constraint, we aimed to approximate the incident population by focusing on a more specific diagnostic subgroup.
+
+We selected individuals coded with E101, corresponding to episodes of diabetic ketoacidosis, a serious and typically initial presentation of untreated T1D. This group provides a plausible proxy for incident cases, as such episodes often reflect undiagnosed or newly diagnosed individuals requiring immediate medical intervention. This criterion yielded a cohort of just over 9,000 individuals. We plot the comparative gender and age distribution of both proxy *incident* and *prevalent* populations:
+
+```{python}
+total_t1d_e101 = pd.read_csv("results_analysis/total_t1d_e101.csv").assign(desc="Incident")
+total_t1d = pd.read_csv("results_analysis/total_t1d.csv").assign(desc="Prevalent")
 t1_visits = pd.read_csv("results_analysis/t1d_visits_ts.csv")
 t1d_associations = pd.read_csv("results_analysis/t1d_associations.csv")
 ```
 
-## Data provided by Sanofi 
-
-The Sanofi teams provided us with a dataset in .csv format. A summary of the data is presented in --Annex--:
-
- 
-## Complementary Data
-
-To enrich the dataset provided by Sanofi, we searched for additional open-source data. We focused on the following databases:
- 
-- Météo France database: selected based on findings from existing studies suggesting a potential link between UV exposure and disease incidence.
-- SIRENE database: used to complement the equipment dataset provided by the Sanofi teams.
-- DPE database: incorporated as an additional source to enhance the existing datasets.
-- INSEE database : used to get the influence of the mobility of persons between localities.
-- GitHub repository gregoredavid/france-geojson: a collection of .geojson files representing French communes, districts, and departments, used for map rendering and geolocation purposes.
-- Base INCA 3 : used for food habits and consumption at regional levels. 
-
-
 ```{python}
-#| fig-cap: Distribution of "incident" population by age
-total_t1d_e101['sexe'] = pd.Categorical(total_t1d_e101['sexe'])
-total_t1d_e101['sexe_label'] = total_t1d_e101['sexe'].map({2: 'female', 1: 'male'})
+#| fig-cap: T1D Population, Age and Sex, France 2023
+
+T1D_DATA = pd.concat([total_t1d_e101, total_t1d], ignore_index=True)
+T1D_DATA['sexe'] = pd.Categorical(T1D_DATA['sexe'])
+T1D_DATA['sexe_label'] = T1D_DATA['sexe'].map({2: 'female', 1: 'male'})
+
+(
+    T1D_DATA[T1D_DATA['age'] < 30]        # filter(h < 15)
+    .groupby('desc')           # group_by(x)
+    ['count'].sum()             # summarise(sum(z))
+    .reset_index()          # to get 'x' back as a column
+)
 
 
 cmap = cm.get_cmap('tab10', 2)
 colors = [mcolors.rgb2hex(cmap(i)) for i in range(cmap.N)]
 
-(
-    ggplot(total_t1d_e101, aes(x='age', y='count', fill='sexe_label')) +
+(    
+    ggplot(T1D_DATA, aes(x='age', y='count', fill='sexe_label')) +
     geom_bar(stat='identity', width=1.5) +
     scale_fill_identity() +  # pour utiliser les couleurs telles quelles
     scale_fill_manual(values=colors, name='Sex') +
-    ylab('Number of cases') +
-    theme_minimal(base_size=14) +
-    theme(figure_size=(8, 5))
+    facet_wrap("desc", scales="free_y")+
+    labs(y='Count', x="") +
+    theme_minimal(base_size=12) +
+    theme(
+    legend_position='bottom',
+    text=element_text(family="Times New Roman"),
+    figure_size=(6, 3.1),
+    panel_spacing=.03
+    )
 )
 ```
 
-In order to control that this population is somehow the incident population, we compared it with the population being diagnosed for all forms of T1D (codes to E101 to E109) which we could assume is the prevalent population. With such filters we obtain the following population : 
+This E101-defined population exhibits markedly different characteristics from the broader prevalent group, most notably in terms of age. Given that T1D predominantly affects younger individuals, we further restricted our sample to those aged 29 years or younger. [^restrict] This final subset, our working proxy for the incident T1D population, includes slightly more than 5,000 individuals. We subsequently compared the temporal distribution of hospital visits across the defined populations and observed marked differences in their admission patterns.
 
-``` {python}
-#| fig-cap: Distribution of "prevalent" population by age
-total_t1d['sexe'] = pd.Categorical(total_t1d['sexe'])
-total_t1d['sexe_label'] = total_t1d['sexe'].map({2: 'female', 1: 'male'})
 
-cmap = cm.get_cmap('tab10', 2)
-colors = [mcolors.rgb2hex(cmap(i)) for i in range(cmap.N)]
-
-(
-    ggplot(total_t1d, aes(x='age', y='count', fill='sexe_label')) +
-    geom_bar(stat='identity', width=1.5) +
-    scale_fill_identity() +  # pour utiliser les couleurs telles quelles
-    scale_fill_manual(values=colors, name = "Sex") +
-    ylab('Proportion') +
-    theme_minimal(base_size=14) +
-    theme(figure_size=(8, 5))
-)
-
-```
-
-Our hypothesis is that our "incident population" closely resembles what we would expect for an incident population of type 1 diabetes (T1D), as compared to the "prevalent population." Consequently, for our models, we will select patients under 25 years old.
-
-Furthermore, we observe that the weekly distribution of hospital visits differs between the incident and prevalent populations (see graphic below). This leads us to conclude that, while our isolated population may not be the exact incident population, it still exhibits distinct characteristics compared to the prevalent population.
-
-Specifically, we note two major differences between the distributions of T1D - All (the prevalent population) and T1D - E101 (the incident population). First, there is a significant decrease in visits during the summer (approximately weeks 27 to 35) for the T1D - All population, whereas no such decrease is observed for the T1D - E101 population. This can be explained by the fact that acidosis has severe effects on the body and requires immediate treatment.
-
-Secondly, the distribution of T1D - E101 visits exhibits a U-shape, with more visits occurring during winter than summer. This pattern is not representative of the T1D - All distribution. This latter difference further supports our conclusion that our two populations exhibit distinct characteristics.
+[^restrict]: A more conservative age threshold (e.g., 14 years and under) is available through INSEE data; however, we would miss the end of the peak of people admitted in a ketoacidosis state seen in Figure 3.
 
 
 ```{python}
-#| fig-cap: Distribution of visits through 2023 for entire population, "prevalent" population and "incident" population
+#| fig-cap: Distribution of visits, T1D population France, 2023
 t1_visits['value'] = pd.to_numeric(t1_visits['value'], errors='coerce')
 
 
@@ -213,26 +313,29 @@ cmap = cm.get_cmap('Paired')
 colors = [mcolors.rgb2hex(cmap(i)) for i in [2, 3, 6]]
 
 (
-    ggplot(plt, aes(x='value', y='prop', fill='population')) +
-    geom_bar(stat='identity', width=1) +
-    scale_fill_manual(values=colors) + # This is the correct way to set fill colors
-    facet_wrap("population") +
-    ylab('Proportion of visits') +
-    xlab('weeks of year') +
-    theme_minimal(base_size=14) +
-    theme(figure_size=(10, 3),legend_position='none',)
+    ggplot(plt, aes(x='value', y='count', color='population')) +
+    geom_line(size = .8) +
+    scale_color_manual(values=colors) + # This is the correct way to set fill colors
+    facet_wrap("population", scales="free_y", ncol = 1) +
+    labs(x = "Week", y = "Count") +
+    theme_minimal(base_size=12) +
+    theme(
+    legend_position='none',
+    axis_text_x=element_text(rotation=45, hjust=1),
+    text=element_text(family="Times New Roman"),
+    figure_size=(6, 4.65),
+    panel_spacing=.03
+    )
 )
 ```
 
-### Associated diagnosis
-
-We also aim to leverage the PMSI Data to identify potential correlations between type 1 diabetes (T1D) diagnoses and other associated diagnoses. We acknowledge that, without medical analysis, it is challenging to determine whether T1D is a cause of an associated diagnosis or if the associated diagnosis is a symptom indicating an increased risk of T1D. Nevertheless, this analysis may provide valuable insights that we can further explore using additional variables.
-
+\vspace{-0.2cm} Notably, the prevalent population exhibits a temporal distribution of hospital admissions closely aligned with that of the overall hospital population. In contrast, the incident population displays a pronounced U-shaped distribution: admission rates are lowest during the summer months and peak during the winter. Finally we wanted to see if some associated diagnosis were more likely to appear in our different populations, and again we observe significant heterogeneity. We report a few the relationship we found most interesting. 
 
 ```{python}
-#| fig-cap: Frequence of associated diagnosis given the population
+#| fig-cap: Frequency of associated diagnosis given the population
 
 t1d_associations = t1d_associations[~t1d_associations['specific_diag'].isin(['Calcium','Drugs','Employment','Vitamin B12'])]
+t1d_associations['population'] = t1d_associations['population'].where(t1d_associations['population'] != "All Visits", "All Individuals")
 
 cmap = cm.get_cmap('tab20', 20)
 colors = [mcolors.rgb2hex(cmap(i)) for i in range(cmap.N)]
@@ -244,194 +347,23 @@ colors = [mcolors.rgb2hex(cmap(i)) for i in range(cmap.N)]
     scale_fill_identity() +  # pour utiliser les couleurs telles quelles
     scale_fill_manual(values=colors) +
     ylab(False) +
-    theme_minimal(base_size=14)+
+    labs(x = "")+
+    theme_minimal(base_size=12)+
     theme(
-        figure_size=(10, 7),
-        legend_position='none',
-        axis_text_x=element_text(rotation=45, hjust=1))
-)
-```
-
-From this statistical analysis, we observe that the following diagnoses are more frequently associated with the incident population compared to the prevalent population and the general hospital population:
-
-- Family stress
-- Deficiencies in vitamins D, B9, B12 (which we cannot plot for re-identification reasons), and other minerals
-- Tobacco consumption
- 
-Alcohol consumption is also more frequent, although the difference in frequency tends to diminish for younger populations (under 25 years old). Therefore, we will not include alcohol consumption in our models.
-
-Malnutrition, which we assume is directly caused by acidosis, will also be excluded from our models.
-
-Even if we cannot say in advance that those factors are symptoms of acidosis or are protective / trigerring factors, we will keep them for our first model.
-
-\newpage
-
-## Data Selection
-
-### PCA on all variables
-
-In order to select features from the data at your disposal, we use a Principal Components Analysis (PCA). This tool should help us to distinguish variables which are explanatory of the variance of our dataset. The results of our PCA are presented in annexe. Below the results of the cumulative variance explained by the number of first principal components : 
-
-```{python}
-#| fig-cap: Cumulative variance of PCA for all variables
-import pandas as pd
-import numpy as np
-from plotnine import *
-
-df = pd.read_csv("results_analysis/var_arr.csv", delimiter=',', names=['pc','var'], header=0)
-
-df['CumulativeVariance'] = df['var'].cumsum()
-
-(
-    ggplot(df, aes(x='pc', y='CumulativeVariance')) +
-    geom_line(linetype='dashed') +
-    geom_point(size=3) +
-    labs(
-        title='Explained variance by principal components',
-        x='Number of components',
-        y='Cumulative explained variance'
-    ) +
-    theme_minimal() +
-    theme(figure_size=(7, 5)) +
-    scale_x_continuous(breaks=range(1, len(df)+1))
-)
-```
-
-The projections of the different variables are available in the Annex. It is noteworthy that the explained cumulative variance is relatively low with few components, not even reaching 0.8 for 10 components. This indicates that we cannot simply reduce dimensions using principal components; instead, we will need to manually select variables that appear to be interesting and explanatory of the total variance. The selection of variables is discussed below.
-
-To assist in selecting variables, we attempted to apply PCA to variables grouped by theme or characteristic. This dimensionality reduction will be particularly useful for control variables, such as social and economic variables. We applied PCA to the following groups: asset variables, and social and economic variables. Only the social and economic variables yielded interesting results with PCA.
-
-### PCA for social and economical variables
-
-We recognize that social and economic variables can often be explained by fewer components. Since these variables will only be used for control in our model, it is not necessary to retain a full understanding of the principal components. However, we will propose an interpretation of these components. All variables are scaled before applying PCA.
-
-```{python}
-#| fig-cap: Cumulative variance of PCA for social and economical variables
-import pandas as pd
-import numpy as np
-from plotnine import *
-
-df = pd.read_csv("results_analysis/var_arr_ses.csv", delimiter=',', names=['pc','var'], header=0)
-
-df['CumulativeVariance'] = df['var'].cumsum()
-
-(
-    ggplot(df, aes(x='pc', y='CumulativeVariance')) +
-    geom_line(linetype='dashed') +
-    geom_point(size=3) +
-    labs(
-        title='Explained variance by principal components',
-        x='Number of components',
-        y='Cumulative explained variance'
-    ) +
-    theme_minimal() +
-    theme(figure_size=(7, 5)) +
-    scale_x_continuous(breaks=range(1, len(df)+1))
-)
-
-```
-
-We conclude that almost 90% of the variance of all social and economical variables can be explained with the first three principal components. We show below the projections of every variable on the six first principal components. The aim of this plot will be to find an interpretation of the first three components in order to validate the reduction of dimension for our social and economical variables for our models.
-
-```{python}
-#| fig-cap: Projections of PC on social and economical variables
-import pandas as pd
-import numpy as np
-from plotnine import *
-import matplotlib.cm as cm
-import matplotlib.colors as mcolors
-
-def plot_small_grid_plotnine(
-    loadings: pd.DataFrame,
-    col_to_print: list,
-    cols: int = 3,
-    set_lim: bool = False,
-    lim: tuple = None,
-    colors: list = None
-):
-    # Melt the DataFrame to long format for plotnine
-    df_long = (
-        loadings[col_to_print]
-        .reset_index()
-        .melt(id_vars='index', var_name='Feature', value_name='Loading')
-        .rename(columns={'index': 'Component'})
+    legend_position='none',
+    axis_text_x=element_text(rotation=45, hjust=1),
+    text=element_text(family="Times New Roman"),
+    figure_size=(6.5, 4.7),
+    panel_spacing=.03
     )
-
-    # Generate colors if not provided
-    if colors is None:
-        cmap = cm.get_cmap("Set2", len(col_to_print))
-        colors = [mcolors.rgb2hex(cmap(i)) for i in range(cmap.N)]
-
-    # Build plot
-    p = (
-        ggplot(df_long, aes(x='Feature', y='Loading', fill='Feature')) +
-        geom_bar(stat='identity') +
-        facet_wrap('~Component', ncol=cols, scales='free_y') +
-        scale_fill_manual(values=colors) +
-        ylab('') +
-        xlab('') +
-        theme_minimal() +
-        theme(
-            figure_size=(cols * 2, (len(loadings) + cols - 1) // cols * 2),
-            axis_text_x=element_text(rotation=90, hjust=1),
-            legend_position='none',
-
-        ) +
-        labs(title='Projections of variables on PCA')
-    )
-
-    # Apply y-axis limits if needed
-    if set_lim:
-        min_y, max_y = lim if lim is not None else (
-            df_long['Loading'].min(), df_long['Loading'].max())
-        # Use coord_cartesian to set y limits for facets
-        p += coord_cartesian(ylim=(min_y, max_y))
-
-    return p
-
-load_arr_ses= pd.read_csv("results_analysis/load_arr_ses.csv")
-rename_dict = {
-  'dip_001T' : "01. Sans diplôme",
-  'dip_200R' : "02. Brevet",
-  'dip_300R' : "03. Bac Pro",
-  'dip_350R' : "04. Bac Gén.",
-  'dip_500R' : "05. Bac + 2",
-  'dip_600R' : "06. Bac + 4",
-  'dip_700R' : "07. Bac + 5",
-  'proportion_imposable_ens_arr' : "08. % pop. imposable",
-  'd1_ens_arr' : "09. 1er déc. revenu",
-  'q1_ens_arr' : "10. 1er quant. revenu",
-  'q2_ens_arr' : "11. 2e quant. revenu",
-  'q3_ens_arr' : "12. 3e quant. revenu",
-  'd9_ens_arr' : "13. 9e déc. revenu",
-  'gini_ens_arr' : "14. indic. Gini INSEE",
-}
-
-load_arr_ses = load_arr_ses.rename(index=rename_dict)
-load_arr_ses = load_arr_ses.sort_index()
-
-
-
-plot_small_grid_plotnine(
-    loadings = load_arr_ses,
-    col_to_print = ['PC1','PC2','PC3','PC4','PC5','PC6'],
-    cols = 4,
-    set_lim = True,
-    lim = (-1, 1),
 )
 ```
 
-PC1 : This group may correspond to individuals with high levels of education who earn above-average salaries.
- 
-PC2 : This group may correspond to individuals with lower educational attainment compared to those represented by PC1, but who still have relatively good salaries given their level of education.
- 
-PC3 : This group may correspond to individuals who mostly hold a general Baccalauréat up to a Bachelor's or Master's degree (Bac +4), but who tend to have relatively modest salaries given their level of education.
+\vspace{-0.3cm} Individuals admitted in a state of diabetic ketoacidosis were significantly more likely to receive co-diagnoses related to social, economic, or familial difficulties compared to the broader hospital population. These patients also showed higher rates of malnutrition, though not of obesity—unlike the prevalent T1D population, in which overweight and obesity are more common, likely reflecting weight gain associated with insulin therapy (Russell-Jones & Khan).
 
-To conclude our 3 first components are meaningfull, we will keep them for our models.
+We also observed a notably high prevalence of Vitamin D deficiency in the incident population. This finding may be linked to the seasonal pattern of hospital admissions discussed earlier, suggesting a potential environmental component to disease onset. Other nutritional deficiencies were identified but are not visualized here due to data sensitivity and re-identification concerns.
 
-### Synthesis of variables of interest
-
-A table with variables of interest that we keep for our models is available in ---Annex---
+Additionally, we found a higher incidence of substance use disorders, particularly related to tobacco and alcohol. Further checks revealed that alcohol-related co-diagnoses were concentrated among older individuals, suggesting these cases may reflect poor disease management—where alcohol use potentially exacerbates or signals lapses in treatment adherence resulting in ketoacidosis. In contrast, tobacco use was more uniformly distributed across age groups.
 
 \newpage 
 
@@ -441,7 +373,7 @@ Selecting variables for the primary model presented a significant challenge due 
 
 Employing variable selection methods driven by relationships within the dataset itself compromises subsequent statistical inference. Most notably, it renders p-values unreliable for controlling the risk of Type I errors. Furthermore, automatic selection introduces interpretative difficulties. In observational settings often characterized by unobserved heterogeneity, it becomes challenging to discern the substantive reasons for a variable's inclusion beyond its predictive performance or simple correlation with the outcome (here, T1D).
 
-Therefore, we adopted a manual selection approach. This allows us to incorporate variables based on pre-defined hypotheses regarding their potential influence, informed by theoretical considerations from the literature, results from our exploratory PCA (which excluded T1D-related variables), and descriptive statistics concerning seasonality and associated diagnoses. For transparency, the justification for each chosen variable is provided in the annex to this report. We add or remove certains controls after modelling to evaluate sensitivity of our estimates. 
+Therefore, we adopted a manual selection approach. This allows us to incorporate variables based on pre-defined hypotheses regarding their potential influence, informed by theoretical considerations from the literature, results from our exploratory PCA (which excluded T1D-related variables), and descriptive statistics concerning seasonality and associated diagnoses. For transparency, the justification for each chosen variable is provided in the annex to this report (appendix A.3). We add or remove certain controls after modeling to evaluate sensitivity of our estimates. 
 
 Our primary analysis employs Poisson and Negative Binomial regression models to explain the number of "new cases" observed at various geographical levels. To address inherent concerns about the ecological fallacy, where aggregate-level associations may not accurately reflect individual-level risks, we leverage data across different geographic levels and conduct heterogeneity analyses within selected sub-populations. Finding consistent results across these different levels and groups strengthens the evidence for the robustness of inference.
 
@@ -465,7 +397,7 @@ rename_map = {
     'diag_calcium': 'Share w/ Calcium Def.',
     'diag_family': 'Share w/ Family Issues',
     'diag_other_minerals': 'Share w/ Mineral Def.',
-    'diag_tabacco': 'Share w/ Tabacco Addic.',
+    'diag_tabacco': 'Share w/ Tobacco Addic.',
     'diag_vitamin_b12': 'Share w/ Vitamin B12 Def.',
     'diag_vitamin_b9': 'Share w/ Vitamin B9 Def.',
     'diag_vitamin_d': 'Share w/ Vitamin D Def.',
@@ -645,7 +577,7 @@ print(build_table(
     ))
 ```
 
-The regression coefficients are reported as Incidence Rate Ratios (IRR), calculated $\exp(\beta_x)$. An IRR greater than 1 indicates a positive association with the incidence rate, while an IRR less than 1 indicates a negative association. Given the limited sample size, we consider three significance levels: 0.1, 0.05, and 0.01, denoted by one to three stars, respectively. Full regression outputs are available in Annex A.1.
+The regression coefficients are reported as Incidence Rate Ratios (IRR), calculated $\exp(\beta_x)$. An IRR greater than 1 indicates a positive association with the incidence rate, while an IRR less than 1 indicates a negative association. Given the limited sample size, we consider three significance levels: 0.1, 0.05, and 0.01, denoted by one to three stars, respectively. Full regression outputs are available in Appendix A.5.
 
 ### Socioeconomic Principal Components
 
@@ -657,7 +589,7 @@ A few variables consistently stand out. The percentage of the hospital populatio
 
 The number of gyms per 1,000 inhabitants is significant at the BV level. While not statistically significant at the arrondissement level, the similarity in coefficient magnitude suggests this is more likely a matter of limited statistical power than a true absence of effect.
 
-Vitamin D and calcium deficiencies exhibit alternating significance across arrondissement and BV levels. Removing one of the two tends to decrease the p-value of the other. However, it is important to note that diagnostic hospital data on nutriment deficiencies may not be reliable a proxy for population-level nutritional status, as they may also capture prevalent local conditions. To better evaluate the vitamin D hypothesis, we will rely on non-diagnostic variables in a subsequent fixed effects model.
+Vitamin D and calcium deficiencies exhibit alternating significance across arrondissement and BV levels. Removing one of the two tends to decrease the p-value of the other. However, it is important to note that diagnostic hospital data on nutrient deficiencies may not be reliable a proxy for population-level nutritional status, as they may also capture prevalent local conditions. To better evaluate the vitamin D hypothesis, we will rely on non-diagnostic variables in a subsequent fixed effects model.
 
 ### Environmental and Contextual Variables
 
@@ -693,7 +625,7 @@ A similar pattern of heterogeneity is observed with the presence of butchers, wh
 
 The principal component PC3, previously characterized as reflecting lower to middle education, is also more strongly associated with increased incidence among males. This may suggest lower-quality consumption habits among less-educated men.
 
-Finally, the number of assaults per 1,000 inhabitants is positively associated with incidence for both sexes, with a slightly stronger effect observed among females. This may reflect the well-documented phenomenon that feelings of insecurity are more prevalent among women than men [REFERENCE].
+Finally, the number of assaults per 1,000 inhabitants is positively associated with incidence for both sexes, with a slightly stronger effect observed among females. This may reflect the idea that the feelings of insecurity are more prevalent among women than men.
   
 \newpage 
 
@@ -703,9 +635,9 @@ Finally, the number of assaults per 1,000 inhabitants is positively associated w
 
 As previously mentioned, drawing inference from observational data is inherently challenging, especially in the context of ecological inference. Our estimates can vary substantially depending on the inclusion and specification of control variables. For some covariates, we can mitigate this issue by leveraging a time dimension through the use of fixed effects. Fixed effects models are a powerful tool in causal inference, as they absorb all time-invariant unobserved heterogeneity across observational units.
 
-Given the limitations of our data, which includes only one year of observations, only a few variables are suitable for this approach, most notably, monthly weather data. We deliberately avoid using diagnostic hospital data in fixed effects models, as these are subject to seasonal fluctuations in healthcare utilization, potentially introducing population bias. In contrast, weather data should be exogenous and not influenced by such factors. To ensure adequate variability and avoid sparsity (i.e., a high frequency of zeros), we conduct this analysis at the *department* level. Fixed effects estimates are computed using an IRLS-based algorithm with fixed-point acceleration (REFERENCE: FENLnm).
+Given the limitations of our data, which includes only one year of observations, only a few variables are suitable for this approach, most notably, monthly weather data. We deliberately avoid using diagnostic hospital data in fixed effects models, as these are subject to seasonal fluctuations in healthcare utilization, potentially introducing population bias. In contrast, weather data should be exogenous and not influenced by such factors. To ensure adequate variability and avoid sparsity (i.e., a high frequency of zeros), we conduct this analysis at the *department* level. Fixed effects estimates are computed using an IRLS-based algorithm with fixed-point acceleration.
 
-The key objective of this FE analysis is to test the vitamin D hypothesis regarding Type 1 Diabetes (T1D) incidence. Since sunlight exposure is crucial for human vitamin D synthesis [REFERENCE_A; REFERENCE_B], and vitamin D levels typically decline in winter due to limited sun exposure and storage capacity [REFERENCE_C], we investigate whether increased sunshine is associated with reduced T1D incidence, controlling for other meteorological factors.
+The key objective of this FE analysis is to test the vitamin D hypothesis regarding T1D incidence. Since sunlight exposure is crucial for human vitamin D synthesis [\cite{norman_vitamin_2008}], and vitamin D levels typically decline in winter due to limited sun exposure and storage capacity (\cite{holick_vitamin_2007}), we investigate whether increased sunshine is associated with reduced T1D incidence, controlling for other meteorological factors.
 
 ### Sunshine Effects 
 
@@ -713,22 +645,6 @@ Our findings support this hypothesis. Controlling for department fixed effects a
 
 ```{python}
 #| fig-cap: Poisson Fixed-Effects, Consumption Heterogeneity, Clustered SE
-import pandas as pd
-from plotnine import (
-    ggplot, aes, geom_point, geom_errorbar, geom_vline,
-    facet_wrap, theme_minimal, theme, element_text, labs,
-    geom_errorbarh, theme_classic,theme_bw, scale_color_brewer,
-    geom_abline
-)
-from matplotlib import font_manager
-import matplotlib.pyplot as plt
-
-# 1. Register your Times New Roman font
-font_path = "ressources/fonts/Times-New-Roman.otf"
-font_manager.fontManager.addfont(font_path)
-# Use it everywhere in matplotlib/plotnine:
-plt.rcParams['font.family'] = 'Times New Roman'
-plt.rcParams['figure.dpi'] = 300
 
 # 2. Read the CSV
 POISSON_FE = pd.read_csv("results_analysis/poisson-fixed_effects.csv")
@@ -790,16 +706,16 @@ p
 
 To further strengthen our interpretation, we assess whether the effect of sunshine is more pronounced in regions with lower dietary intake of vitamin D. Such a pattern would be consistent with the idea that sunlight captures vitamin D in our population. Our results indicate that in low-consumption regions, the negative effect of sunlight on T1D incidence is slightly stronger, though also noisier.[^1] Nevertheless, the effect remains statistically significant in both high- and low-consumption regions, lending support to the vitamin D interpretation.
 
-[^1]: Note that the difference is not *statistcally* significant
+[^1]: Note that the difference is not *statistically* significant
 
-Model dispersion is limited, indicating that a Poisson specification is appropriate. The model’s pseudo-$R^2$ ranges from 33% to nearly 50%, largely due to the inclusion of fixed effects. Detailed regression tables can be found in Annex A.4.
+Model dispersion is limited, indicating that a Poisson specification is appropriate. The model's pseudo-$R^2$ ranges from 33% to nearly 50%, largely due to the inclusion of fixed effects. Detailed regression tables can be found in appendix A.7.
 
 \newpage 
 
 ### Sunshine and Vitamin D
 As a final validation step, we test whether the noisy vitamin D deficiency variable from Section 5.1 is indeed related to sunlight exposure and thus serves as a proxy for population-level deficiency. We estimate a fixed effects linear model:
 $$Y_{it} = \alpha_i + \text{sunshine}_{it} + \text{visits}_{it} + \varepsilon_{it} $$
-Where the dependent variable $Y_{it}$ is the share of hospital patients diagnosed with vitamin D deficiency in department $i$ at month $t$. We explain this $Y_{it}$ by a department fixed effect $\alpha_i$, the number of sunny days and where we attempt to controll for seasonality using the number of monthly hopistal visits in the department.
+Where the dependent variable $Y_{it}$ is the share of hospital patients diagnosed with vitamin D deficiency in department $i$ at month $t$. We explain this $Y_{it}$ by a department fixed effect $\alpha_i$, the number of sunny days and where we attempt to control for seasonality using the number of monthly hospital visits in the department.
 
 ```{python}
 #| results: asis
@@ -841,14 +757,14 @@ While these fixed effects analyses significantly strengthen the evidence by cont
 
 ### Motivation 
 
-While fixed effects models allow leveraging the time dimension for certain variables, they cannot be applied to time-invariant characteristics or when panel data is unsuseable for specific factors of interest, such as tobacco addiction patterns derived from hospital data. To estimate the potential causal effect of such variables, we turn to Double Machine Learning (DML). Conceptually, DML, like matching methods, aims to compare observational units that are very similar across a range of characteristics (X) but differ in their level of a specific "treatment" variable (D). We employ DML within a partially linear framework, assuming the outcome (Y, T1D incidence) and treatment (D) models can be represented as:
+While fixed effects models allow leveraging the time dimension for certain variables, they cannot be applied to time-invariant characteristics or when panel data is unusable for specific factors of interest, such as tobacco addiction patterns derived from hospital data. To estimate the potential causal effect of such variables, we turn to Double Machine Learning (DML). Conceptually, DML, like matching methods, aims to compare observational units that are very similar across a range of characteristics (X) but differ in their level of a specific "treatment" variable (D). We employ DML within a partially linear framework, assuming the outcome (Y, T1D incidence) and treatment (D) models can be represented as:
 $$Y = D \theta_0 + g_0(X) + \zeta, \quad \text{where } E[\zeta | D, X] = 0$$
 $$D = m_0(X) + V, \quad \text{where } E[V | X] = 0$$
 Where, $Y$ is the outcome variable, $D$ is the treatment variable, $\theta_0$ is the target causal parameter, $X$ are the confounding variables, $g_0(X) = E[Y | X]$ and $m_0(X) = E[D | X]$ are unknown nuisance functions, $\zeta$ and $V$ are error terms.
 
-A key advantage of DML is its use of machine learning (ML) techniques to flexibly estimate nuisance functions without strong parametric assumptions, which also aids in handling high-dimensional X (variable selection). We utilized Random Forests as the ML learner for both, chosen for its flexibility in capturing complex relationships and its implicit variable selection. This data-driven estimation of nuisance components avoids injecting strong prior beliefs into that part of the model. Further details on the DML methodology are provided in Annex A.Z.
+A key advantage of DML is its use of machine learning (ML) techniques to flexibly estimate nuisance functions without strong parametric assumptions, which also aids in handling high-dimensional X (variable selection). We utilized Random Forests as the ML learner for both, chosen for its flexibility in capturing complex relationships and its implicit variable selection. This data-driven estimation of nuisance components avoids injecting strong prior beliefs into that part of the model. Further details on the DML methodology are provided in appendix A.4.
 
-This DML analysis was applied to several variables identified as potentially important from the previous models. Due to computational constraints these models were estimated only at the arrondissement level.[^virtual] Checks related to the common support assumption and the predictive performance of the first-stage models are discussed in Annex A.5 and were found to be broadly acceptable.
+This DML analysis was applied to several variables identified as potentially important from the previous models. Due to computational constraints these models were estimated only at the arrondissement level.[^virtual] Checks related to the common support assumption and the predictive performance of the first-stage models are discussed in appendix A.6 and were found to be broadly acceptable.
 
 [^virtual]: The analysis was performed on a virtual machine with limited resources (2 vCPUs, no GPU), preventing parallelization of cross-validation or extensive hyperparameter tuning for the Random Forest learners.
 
@@ -867,9 +783,9 @@ df = (
       .filter(pl.col("desc") != "dml-n_ape4722z")
 )
 
-rename_map['diag_tabacco'] = 'Share w/ Tabacco Addic. (T)'
-rename_map['tabacco-female'] = 'Share w/ Tabacco Addic. (F)'
-rename_map['tabacco-male'] = 'Share w/ Tabacco Addic. (M)'
+rename_map['diag_tabacco'] = 'Share w/ Tobacco Addic. (T)'
+rename_map['Tobacco-female'] = 'Share w/ Tobacco Addic. (F)'
+rename_map['Tobacco-male'] = 'Share w/ Tobacco Addic. (M)'
 
 mapping_df = pl.DataFrame({
     "code": list(rename_map.keys()),
@@ -918,18 +834,32 @@ p
 ```
 
 
-\vspace{-0.3cm}  We find a clear and statistically significant positive effect of the share of the hospital population diagnosed with tobacco addiction on T1D incidence, significant at the 1% level.[^tabacco] When analyzing by sex, the estimates become noisier: the effect remains significant for males (at the 10% level) but is not significant for females. While we cannot interpret tobacco use as an individual-level risk factor, due to the risk of ecological fallacy, the robustness of this finding across multiple models and subpopulations supports the conclusion that tobacco consumption at the population level increases the risk of T1D, particularly among males. Additionally, the number of fast food establishments is marginally significant, falling just below the 5% threshold. This result contributes to the growing body of evidence suggesting that unhealthy consumption behaviors within a population are associated with increased T1D incidence.
+\vspace{-0.3cm}  We find a clear and statistically significant positive effect of the share of the hospital population diagnosed with tobacco addiction on T1D incidence, significant at the 1% level.[^Tobacco] When analyzing by sex, the estimates become noisier: the effect remains significant for males (at the 10% level) but is not significant for females. While we cannot interpret tobacco use as an individual-level risk factor, due to the risk of ecological fallacy, the robustness of this finding across multiple models and subpopulations supports the conclusion that tobacco consumption at the population level increases the risk of T1D, particularly among males. Additionally, the number of fast food establishments is marginally significant, falling just below the 5% threshold. This result contributes to the growing body of evidence suggesting that unhealthy consumption behaviors within a population are associated with increased T1D incidence.
 
-No other variables reach our choosen level of statistical significance (10%). Notably, the previously observed counterintuitive negative association with NO$_2$ concentrations is no longer statistically significant.  Other environmental variables, such as insecurity, proxied by the number of assaults, are also not statistically significant. However, we did not exclude other crime-related variables from the model, this is a limitation of our use of DML. For some variables we don't have clear enough causal relationship to test and as such we may suffer from collider bias.
+No other variables reach our chosen level of statistical significance (10%). Notably, the previously observed counterintuitive negative association with NO$_2$ concentrations is no longer statistically significant.  Other environmental variables, such as insecurity, proxied by the number of assaults, are also not statistically significant. However, we did not exclude other crime-related variables from the model, this is a limitation of our use of DML. For some variables we don't have clear enough causal relationship to test and as such we may suffer from collider bias.
 
-[^tabacco]: (T): Total Population; (M): Males; (F): Females
+[^Tobacco]: (T): Total Population; (M): Males; (F): Females
 \newpage 
 
 # Conclusion
 
+This study aimed to investigate the regional variations in T1D incidence across metropolitan France by examining associations with a comprehensive set of environmental, demographic, and socioeconomic indicators derived from PMSI hospital data and diverse external sources. Adopting an inferential approach, our primary objective was to identify potential risk and protective factors contributing to these geographical disparities.
+
+Our analyses, employing Poisson/Negative Binomial regressions, Fixed Effects models, and Double Machine Learning techniques, yielded several notable findings. We found consistent evidence supporting a protective association between increased sunshine duration (a proxy for Vitamin D synthesis) and lower monthly T1D incidence rates at the department level. This association held significance even when accounting for regional differences in dietary Vitamin D intake. Conversely, a higher prevalence of diagnosed tobacco addiction within a region was robustly associated with increased T1D incidence, an effect particularly pronounced among males. Socioeconomic factors also emerged as relevant, with indicators reflecting lower-to-middle educational attainment showing a positive association with incidence, again more strongly in males, while higher education and income were negatively associated.
+
+It is crucial to interpret these findings within the context of the study's limitations. As an exercise in ecological inference based on aggregate data, our results reflect associations at the regional level and cannot establish individual-level causality. The reliance on a single year of data (2023) restricts longitudinal insights, and the use of proxy variables, such as ketoacidosis diagnoses (E101) for incidence and hospital data for population-level health indicators like Vitamin D deficiency,carries inherent uncertainties. Unobserved confounding factors common to observational studies may also influence the estimates.   
+
+Despite these caveats, this research provides valuable insights into potential drivers of T1D heterogeneity in France and highlights promising avenues for future investigation. Leveraging additionnal years of PMSI data would enable more robust longitudinal analyses and refine incidence estimation. Further research should also aim to incorporate individual mobility patterns and utilize more direct measures for environmental exposures, dietary habits, and socioeconomic status. 
+
+
+
 \newpage
 
 # Bibliography 
+\nocite{*}
+\begingroup
+\let\clearpage\relax
+\printbibliography[heading=none]
 
 \newpage
 \setcounter{section}{0}
@@ -937,7 +867,101 @@ No other variables reach our choosen level of statistical significance (10%). No
 
 # Appendix 
 
-## Prevalent population and incident population by "departements"
+## Principal Component Analysis
+
+### Main Loadings From Full PCA (ARR)
+
+```{python}
+load_p = pd.read_csv("results_analysis/load_arr.csv")
+
+load_p = load_p.rename(columns={"Unnamed: 0": "Feature"})
+load_p = load_p.set_index("Feature")
+
+
+def plot_top_loading_simple(df: pd.DataFrame,
+                                     col_names: list,
+                                     top_n: int = 5):
+    top_entries = []
+
+    for col in col_names:
+        top_pos = df[col].nlargest(top_n)
+        top_neg = df[col].nsmallest(top_n)
+
+        temp_df = pd.concat([top_pos, top_neg]).reset_index()
+        temp_df.columns = ['Feature', 'Loading']
+        temp_df['Component'] = col
+
+        top_entries.append(temp_df)
+
+    df_long = pd.concat(top_entries, ignore_index=True)
+    df_long['sign'] = np.where(df_long['Loading'] > 0, 'positive', 'negative')
+    df_long['Feature'] = df_long['Feature'].astype(str)
+
+    p = (
+        ggplot(df_long, aes(x='Feature', y='Loading', fill = 'sign')) +
+        geom_bar(stat='identity') +
+        coord_cartesian(ylim=(-1, 1)) +  
+        theme_minimal(base_size=12) +
+        scale_fill_manual(values=["#F9ACB1", "#96C4DB"])+
+        theme(
+            legend_position='none',
+            text=element_text(family="Times New Roman"),
+            figure_size=(5, 3.5),
+            axis_text_x=element_text(rotation=45, hjust=1),
+        ) +
+        labs(x='', y='')
+    )
+
+    return p
+```
+
+```{python}
+#| fig-cap: Top 5 Positive and negative variables PC1
+plot_top_loading_simple(
+    df=load_p,
+    col_names=['PC1'],
+    top_n=5) 
+```
+
+```{python}
+#| fig-cap: Top 5 Positive and negative variables PC2
+
+plot_top_loading_simple(
+    df=load_p,
+    col_names=['PC2'],
+    top_n=5) 
+```
+
+```{python}
+#| fig-cap: Top 5 Positive and negative variables PC3
+
+plot_top_loading_simple(
+    df=load_p,
+    col_names=['PC3'],
+    top_n=5) 
+```
+
+```{python}
+#| fig-cap: Top 5 Positive and negative variables PC4
+
+plot_top_loading_simple(
+    df=load_p,
+    col_names=['PC4'],
+    top_n=5) 
+```
+
+```{python}
+#| fig-cap: Top 5 Positive and negative variables PC5
+
+plot_top_loading_simple(
+    df=load_p,
+    col_names=['PC5'],
+    top_n=5) 
+```
+
+\newpage 
+
+### Cartography of France Full PCA 
 
 ```{python}
 import matplotlib.pyplot as plt
@@ -946,6 +970,33 @@ from matplotlib.patches import Patch
 import pandas as pd
 import numpy as np
 import os
+
+def reco_code(x):
+  x = str(x)
+  a = x[:2]
+  b = x[4:]
+  if 'A' in a or 'B' in a:
+    return np.nan
+  else:
+    return str(a) + str(b)
+
+def refine_code(x, n):
+  x = str(x)
+  if 'A' in x.upper() or 'B' in x.upper():
+    return np.nan
+  if len(x) == n - 1:
+    return '0' + x
+  else:
+    return x
+
+arrondissements = gpd.read_file("ressources/arrondissements.geojson")
+
+arrondissements['arr24'] = arrondissements['code'].apply(lambda x: reco_code(x))
+arrondissements = arrondissements[arrondissements['arr24'].notna()]
+
+pca_arr = pd.read_csv("results_analysis/pca_arr.csv")
+pca_arr['arr24'] = pca_arr['arr24'].apply(lambda x: refine_code(x, 3))
+
 
 def mapping_function(
     map : gpd.GeoDataFrame,
@@ -1004,7 +1055,7 @@ def mapping_function(
           vmin = carto[key].min()
           vmax = carto[key].max()
 
-        fig = plt.figure(figsize=(10, 10))
+        fig = plt.figure(figsize=(5, 4))
         ax = fig.add_axes([0.05, 0.1, 0.75, 0.8])
 
         ax.set_title(f"{key}", fontsize=15)
@@ -1043,106 +1094,21 @@ def mapping_function(
         if verbose:
           print(f"\r--> Done : {name}", flush=False)
 
-def refine_code(x, n):
-  x = str(x)
-  if 'A' in x.upper() or 'B' in x.upper():
-    return np.nan
-  if len(x) == n - 1:
-    return '0' + x
-  else:
-    return x
 ```
 
 ```{python}
-#| fig-cap: Incidence for T1D (based on T1D - E101 population) 
-departements = gpd.read_file("ressources/departements.geojson")
+#| fig-format: png
+#| fig-cap: Geographic Representation PC1 
+#| fig-dev: png
 
-departements['dep'] = departements['code']
-departements['dep'] = departements['dep'].apply(lambda x: refine_code(x, 2))
-departements = departements[departements['dep'].notna()]
-departements['dep'] = departements['dep'].astype(str)
-
-# Départements
-t1d_dep = pd.read_csv("results_analysis/t1d_levels_dep.csv")
-
-# Incidence par Départements
-t1d_dep_inc = t1d_dep[t1d_dep['type']=='t1d_e101']
-
-# prévalence par Départements
-t1d_dep_prev = t1d_dep[t1d_dep['type']=='t1d']
-
-t1d_dep_inc['dep'] = t1d_dep_inc['dep'].apply(lambda x: refine_code(x, 2))
-t1d_dep_prev['dep'] = t1d_dep_prev['dep'].apply(lambda x: refine_code(x, 2))
-
-t1d_dep_inc['incidence'] = t1d_dep_inc['count'] / t1d_dep_inc['pop_0029']
-t1d_dep_prev['prevalence'] = t1d_dep_prev['count'] / t1d_dep_prev['pop_0044']
-
-
-# Incidence
-mapping_function(
-    map = departements,
-    df = t1d_dep_inc,
-    how='left',
-    key_to_merge = "dep",
-    key_to_print=['incidence'],
-    key_to_pass = ["nom", "geometry", "code","code_arr","arr24"],
-    forcing = True,
-    color_map = "Blues",
-    verbose = False,
-    centered = False,  # adapt to every colmun
-    bornes_for_all = [], # not used if centerd = True // if empty and centered = False --> default min and max per column
-    miss_color = 'grey'
-)
-
-
-```
-
-```{python}
-#| fig-cap: Prevalence for T1D (based on T1D - All population) 
-mapping_function(
-    map = departements,
-    df = t1d_dep_prev,
-    how='left',
-    key_to_merge = "dep",
-    key_to_print=['prevalence'],
-    key_to_pass = ["nom", "geometry", "code","code_arr","arr24"],
-    forcing = True,
-    color_map = "Oranges",
-    verbose = False,
-    centered = False,  # adapt to every colmun
-    bornes_for_all = [], # not used if centerd = True // if empty and centered = False --> default min and max per column
-    miss_color = 'grey'
-)
-```
-
-\newpage
-## Note on Feature Selection
-### Mapping of PCA for all variables
-
-```{python}
-def reco_code(x):
-  x = str(x)
-  a = x[:2]
-  b = x[4:]
-  if 'A' in a or 'B' in a:
-    return np.nan
-  else:
-    return str(a) + str(b)
-
-arrondissements = gpd.read_file("ressources/arrondissements.geojson")
-
-arrondissements['arr24'] = arrondissements['code'].apply(lambda x: reco_code(x))
-arrondissements = arrondissements[arrondissements['arr24'].notna()]
-
-pca_arr = pd.read_csv("results_analysis/pca_arr.csv")
-pca_arr['arr24'] = pca_arr['arr24'].apply(lambda x: refine_code(x, 3))
-
+from IPython.display import set_matplotlib_formats
+set_matplotlib_formats('png')
 
 mapping_function(
     map = arrondissements,
     df = pca_arr,
     key_to_merge = "arr24",
-    key_to_print= ['PC1','PC2','PC3','PC4','PC5','PC6'],
+    key_to_print= ['PC1'],
     key_to_pass = ["nom", "geometry", "code","code_arr","arr24"],
     forcing = True,
     color_map = "RdBu",
@@ -1153,7 +1119,304 @@ mapping_function(
 )
 ```
 
-### Selected variables
+```{python}
+#| fig-format: png
+#| fig-cap: Geographic Representation PC2
+
+mapping_function(
+    map = arrondissements,
+    df = pca_arr,
+    key_to_merge = "arr24",
+    key_to_print= ['PC2'],
+    key_to_pass = ["nom", "geometry", "code","code_arr","arr24"],
+    forcing = True,
+    color_map = "RdBu",
+    verbose = False,
+    centered = True,  # adapt to every colmun
+    bornes_for_all = [], # not used if centerd = True // if empty and centered = False --> default min and max per column
+    miss_color = 'grey'
+)
+```
+
+```{python}
+#| fig-format: png
+#| fig-cap: Geographic Representation PC3 
+
+mapping_function(
+    map = arrondissements,
+    df = pca_arr,
+    key_to_merge = "arr24",
+    key_to_print= ['PC3'],
+    key_to_pass = ["nom", "geometry", "code","code_arr","arr24"],
+    forcing = True,
+    color_map = "RdBu",
+    verbose = False,
+    centered = True,  # adapt to every colmun
+    bornes_for_all = [], # not used if centerd = True // if empty and centered = False --> default min and max per column
+    miss_color = 'grey'
+)
+```
+
+```{python}
+#| fig-format: png
+#| fig-cap: Geographic Representation PC4
+
+mapping_function(
+    map = arrondissements,
+    df = pca_arr,
+    key_to_merge = "arr24",
+    key_to_print= ['PC4'],
+    key_to_pass = ["nom", "geometry", "code","code_arr","arr24"],
+    forcing = True,
+    color_map = "RdBu",
+    verbose = False,
+    centered = True,  # adapt to every colmun
+    bornes_for_all = [], # not used if centerd = True // if empty and centered = False --> default min and max per column
+    miss_color = 'grey'
+)
+```
+
+\newpage
+
+### Variable loadings from PCA-SES (ARR)
+
+```{python}
+#| fig-format: png
+#| fig-cap: Feature Loading PCA-SES (ARR)
+
+set_matplotlib_formats('pdf')
+
+def plot_small_grid_plotnine(
+    loadings: pd.DataFrame,
+    col_to_print: list,
+    cols: int = 3,
+    set_lim: bool = False,
+    lim: tuple = None,
+    colors: list = None
+):
+    # Melt the DataFrame to long format for plotnine
+    df_long = (
+        loadings[col_to_print]
+        .melt(id_vars='label', var_name='Feature', value_name='Loading')
+    )
+
+    # Generate colors if not provided
+    if colors is None:
+        cmap = cm.get_cmap("Set2", len(col_to_print))
+        colors = [mcolors.rgb2hex(cmap(i)) for i in range(cmap.N)]
+
+    # Build plot
+    p = (
+        ggplot(df_long, aes(x='label', y='Loading', fill='Feature')) +
+        geom_bar(stat='identity') +
+        facet_wrap('Feature', ncol=1, scales='free_y') +
+        scale_fill_manual(values=colors)+
+        theme_minimal(base_size=12)  +
+        theme(
+            legend_position='none',
+            text=element_text(family="Times New Roman"),
+            figure_size=(6, 7),
+            panel_spacing=.03, 
+            axis_text_x=element_text(rotation=90, hjust=1)
+        ) +
+        labs(x="", y="")
+    )
+
+    # Apply y-axis limits if needed
+    if set_lim:
+        min_y, max_y = lim if lim is not None else (
+            df_long['Loading'].min(), df_long['Loading'].max())
+        # Use coord_cartesian to set y limits for facets
+        p += coord_cartesian(ylim=(min_y, max_y))
+
+    return p
+
+load_arr_ses = pd.read_csv("results_analysis/load_arr_ses.csv")
+load_arr_ses.columns.values[0] = 'code'
+
+
+rename_df = pd.DataFrame([
+    ["dip_001T", "Education: None"],
+    ["dip_200R", "Education: Brevet"],
+    ["dip_300R", "Education: Bac Pro"],
+    ["dip_350R", "Education: Bac Gén."],
+    ["dip_500R", "Education: Bac +2"],
+    ["dip_600R", "Education: Bac +4"],
+    ["dip_700R", "Education: Bac +5/8"],
+    ["proportion_imposable_ens_arr", "Taxable Share"],
+    ["d1_ens_arr", "1st Decile Income"],
+    ["q1_ens_arr", "1st Quantile Income"],
+    ["q2_ens_arr", "2nd Quantile Income"],
+    ["q3_ens_arr", "3rd Quantile Income"],
+    ["d9_ens_arr", "9th Decile Income"],
+    ["gini_ens_arr", "Gini Index"]
+], columns=["code", "label"])
+
+
+load_arr_ses = load_arr_ses.merge(rename_df, on="code", how="left")
+
+plot_small_grid_plotnine(
+    loadings = load_arr_ses,
+    col_to_print = ['label','PC1','PC2','PC3'],
+    cols = 4,
+    set_lim = True,
+    lim = (-1, 1),
+)
+```
+
+\newpage
+
+### Variable loadings from PCA-SES (BV2022)
+
+We plot the incidence and prevalence rates over French departments to see a priori relations with our main axis of variation. Such visualisation are useful for variable selection see the next appendix. 
+
+```{python}
+#| fig-cap: Feature Loading PCA-SES (BV)
+
+load_bv22_ses = pd.read_csv("results_analysis/load_bv_ses.csv")
+load_bv22_ses.columns.values[0] = 'code'
+
+
+rename_df = pd.DataFrame([
+    ["dip_001T", "Education: None"],
+    ["dip_200R", "Education: Brevet"],
+    ["dip_300R", "Education: Bac Pro"],
+    ["dip_350R", "Education: Bac Gén."],
+    ["dip_500R", "Education: Bac +2"],
+    ["dip_600R", "Education: Bac +4"],
+    ["dip_700R", "Education: Bac +5/8"],
+    ["pimp21", "Taxable Share"],
+    ["med21", "2nd Quantile Income"],
+    ["pimp21", "1st Quantile Income"],
+    ["d121", "1st Decile Income"],
+    ["d921", "9th Decile Income"]
+], columns=["code", "label"])
+
+
+load_bv22_ses = load_bv22_ses.merge(rename_df, on="code", how="left")
+
+plot_small_grid_plotnine(
+    loadings = load_bv22_ses,
+    col_to_print = ['label','PC1','PC2','PC3'],
+    cols = 4,
+    set_lim = True,
+    lim = (-1, 1),
+)
+```
+
+\newpage
+
+## Health Cartography
+
+```{python}
+#| fig-cap: T1D in France, 2023, per 1,000
+
+set_matplotlib_formats('png')
+
+import pandas as pd
+import geopandas as gpd
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+
+# Add Times New Roman font
+font_path = "ressources/fonts/Times-New-Roman.otf"
+fm.fontManager.addfont(font_path)
+plt.rcParams['font.family'] = 'Times New Roman'
+
+# Set figure DPI for high resolution
+plt.rcParams['figure.dpi'] = 300
+
+# Load geospatial data
+departements = gpd.read_file("ressources/departements.geojson")
+
+# Handle department codes properly - convert to numeric where possible, but preserve special codes
+def safe_convert_to_int(x):
+    try:
+        return int(x)
+    except ValueError:
+        return x
+
+departements['dep'] = departements['code'].apply(safe_convert_to_int)
+departements = departements.dropna()
+
+# Load T1D data
+t1d_dep = pd.read_csv("results_analysis/t1d_levels_dep.csv")
+
+# Calculate rate based on type
+t1d_dep['rate'] = t1d_dep.apply(
+    lambda row: row['count'] / row['pop_0044'] * 1000 if row['type'] == 't1d'
+    else row['count'] / row['pop_0029'] * 1000, axis=1
+)
+
+# Create prevalent population dataset
+t1d_full = t1d_dep[t1d_dep['type'] == 't1d'].copy()
+t1d_full = departements.merge(t1d_full, on="dep", how="left")
+t1d_full['type'] = "Prevalent Population"
+
+# Create incident population dataset
+t1d_e101 = t1d_dep[t1d_dep['type'] == 't1d_e101'].copy()
+t1d_e101 = departements.merge(t1d_e101, on="dep", how="left")
+t1d_e101['type'] = "Incident Population"
+
+# Combine datasets
+combined_data = pd.concat([t1d_full, t1d_e101])
+
+# Create plot with enough space for the legends
+fig, axes = plt.subplots(1, 2, figsize=(5.5, 8))
+
+# Create a sequential colormap similar to scale_fill_distiller
+cmap = plt.cm.Blues
+
+# Plot each type with its own independent scale
+for i, (title, group_data) in enumerate(combined_data.groupby('type')):
+    # Filter out NaN values for colormap scaling
+    valid_rates = group_data['rate'].dropna()
+    if len(valid_rates) > 0:
+        vmin = valid_rates.min()
+        vmax = valid_rates.max()
+    else:
+        vmin = 0
+        vmax = 1  # Default if no valid data
+    
+    # Plot the map with its own scale
+    mappable = group_data.plot(
+        column='rate',
+        ax=axes[i],
+        legend=True,
+        cmap=cmap,
+        missing_kwds={'color': 'lightgrey'},
+        vmin=vmin,
+        vmax=vmax,
+        legend_kwds={
+            'label': "",
+            'orientation': "horizontal",
+            'shrink': 0.7,
+            'pad': 0.05,
+            'aspect': 20
+        }
+    )
+    
+    # Move legend to bottom of each subplot
+    cax = mappable.get_figure().axes[-1]
+    cax.set_position([
+        axes[i].get_position().x0 + axes[i].get_position().width * 0.15,
+        axes[i].get_position().y0 - 0.08,
+        axes[i].get_position().width * 0.7,
+        0.02
+    ])
+    
+    axes[i].set_title(title)
+    axes[i].set_axis_off()
+
+plt.tight_layout()
+fig.subplots_adjust(bottom=0.15)  # Add space at bottom for legends
+
+plt.show()
+```
+
+\newpage
+
+## Selected variables
 
 \begin{longtable}{@{}p{3.5cm}>{\centering\arraybackslash}p{1.1cm}p{5.1cm}p{5.1cm}@{}}
 \toprule
@@ -1174,41 +1437,67 @@ mapping_function(
 \bottomrule
 \endlastfoot
 
-PC1 & C & First principal component of the PCA on SES variables & Used to C for SES \\
-PC2 & C & Second principal component of the PCA on SES variables & Used to C for SES \\
-PC3 & C & Third principal component of the PCA on SES variables & Used to C for SES \\
-tm\_summer & T & Average temperature during summer 2023 & Ts for physiological stress from heat exposure \\
-tm\_winter & T & Average temperature during winter 2023 & Ts for influence of moderate cold exposure \\
-somo35\_mean & T & Annual mean of SOMO35 (ozone exposure) & Ts air quality impact \\
-pm10\_mean\_concentration & T & Mean PM10 concentration (µg/m\textsuperscript{3}) & Ts air quality impact \\
-o3\_mean\_concentration & T & Mean O\textsubscript{3} concentration (µg/m\textsuperscript{3}) & Ts air quality impact \\
-no2\_mean\_concentration & T & Mean NO\textsubscript{2} concentration (µg/m\textsuperscript{3}) & Ts air quality impact \\
-ges\_resid & T & Residential greenhouse gas emissions & Proxy for environmental quality \\
-water\_no3 & T & NO\textsubscript{3} concentration in drinking water & Cled by \textit{prop\_robinet}; Ts water quality \\
-water\_ph & T & pH level of drinking water & Cled by \textit{prop\_robinet}; Ts water quality \\
-n\_equip\_d2 & C & Medical/paramedical professionals (private) & Potential influence on early T1D detection \\
-n\_equip\_a1 & C & Local public services & Socio-environmental infrastructure C \\
-n\_equip\_c1 & C & Primary education institutions & SES / public resource C \\
-n\_equip\_c2 & C & Lower secondary education institutions & SES / public resource C \\
-n\_ape5610c & T & Fast food outlets & Ts hypothesis of diet-related risk for T1D \\
-n\_ape9312z & T & Sports clubs & Ts access to physical activity \\
-n\_ape4722z & T & Meat retailers & Ts dietary access hypothesis \\
-n\_ape4723z & T & Fishmongers & Linked to vitamin D intake \\
-coups & T & Assault complaints per inhabitant & Proxy for ambient stress and safety \\
-ac\_prop & T & Share of households with AC & Proxy for heatwave protection \\
-prop\_robinet & C & Proportion drinking tap vs bottled water & Used to interpret water-related quality variables \\
-diag\_vitamin\_d & T & Diagnosed vitamin D deficiency & Vitamin D and T1D link (with reverse causality caution) \\
-diag\_calcium & T & Diagnosed calcium deficiency & Nutritional deficiency hypothesis (reverse causality risk) \\
-diag\_family & T & Indicator of family-related stress & Psychosocial stress hypothesis \\
-diag\_other\_minerals & T & Diagnosed mineral deficiency & General mineral deficiency and T1D risk \\
-diag\_tabacco & T & Indicator of tobacco use & Lifestyle-related trigger for T1D onset \\
-diag\_vitamin\_b9 & T & Diagnosed vitamin B9 deficiency & Nutritional deficiency hypothesis \\
-diag\_vitamin\_b12 & T & Diagnosed vitamin B12 deficiency & Nutritional deficiency hypothesis \\
+Socio-economic PC1 & C & First principal component of the PCA on SES variables & Used to C for SES \\
+Socio-economic PC2 & C & Second principal component of the PCA on SES variables & Used to C for SES \\
+Socio-economic PC3 & C & Third principal component of the PCA on SES variables & Used to C for SES \\
+Summer temperature & T & Average temperature during summer 2023 & Ts for physiological stress from heat exposure \\
+Winter temperature & T & Average temperature during winter 2023 & Ts for influence of moderate cold exposure \\
+Excess Ozone  & T & Annual mean of SOMO35 (ozone exposure) & Ts air quality impact \\
+PM10 Concentration  & T & Mean PM10 concentration (µg/m\textsuperscript{3}) & Ts air quality impact \\
+O3 Concentration & T & Mean O\textsubscript{3} concentration (µg/m\textsuperscript{3}) & Ts air quality impact \\
+NO2 Concentration & T & Mean NO\textsubscript{2} concentration (µg/m\textsuperscript{3}) & Ts air quality impact \\
+Residential GHG & T & Residential greenhouse gas emissions & Proxy for environmental quality \\
+NO3 Concentrations & T & NO\textsubscript{3} concentration in drinking water & Cled by \textit{prop\_robinet}; Ts water quality \\
+Water pH & T & pH level of drinking water & Cled by \textit{prop\_robinet}; Ts water quality \\
+Medical Facilities  & C & Medical/paramedical professionals (private) & Potential influence on early T1D detection \\
+Public Services  & C & Local public services & Socio-environmental infrastructure C \\
+Teaching Primary  & C & Primary education institutions & SES / public resource C \\
+Teaching Secondary  & C & Lower secondary education institutions & SES / public resource C \\
+Fast Foods  & T & Fast food outlets & Ts hypothesis of diet-related risk for T1D \\
+Gyms  & T & Sports clubs & Ts access to physical activity \\
+Butchers  & T & Meat retailers & Ts dietary access hypothesis \\
+Fishmongers  & T & Fishmongers & Linked to vitamin D intake \\
+Assaults  & T & Assault complaints per inhabitant & Proxy for ambient stress and safety \\
+Share of Homes with AC\_prop & T & Share of households with AC & Proxy for heatwave protection \\
+Share of tap drinkers & C & Proportion drinking tap vs bottled water & Used to interpret water-related quality variables \\
+Share w/ Vitamin D Def. & T & Diagnosed vitamin D deficiency & Vitamin D and T1D link (with reverse causality caution) \\
+Share w/ Calcium Def. & T & Diagnosed calcium deficiency & Nutritional deficiency hypothesis (reverse causality risk) \\
+Share w/ Family Issues & T & Indicator of family-related stress & Psychosocial stress hypothesis \\
+Share w/ Mineral Def. & T & Diagnosed mineral deficiency & General mineral deficiency and T1D risk \\
+Share w/ Tobacco Addic. & T & Indicator of tobacco use & Lifestyle-related trigger for T1D onset \\
+Share w/ Vitamin B9 Def. & T & Diagnosed vitamin B9 deficiency & Nutritional deficiency hypothesis \\
+Share w/ Vitamin B12 Def. & T & Diagnosed vitamin B12 deficiency & Nutritional deficiency hypothesis \\
 \end{longtable}
 
 \newpage 
 
 ## Double ML Presentation
+
+Random forest is an ensemble learning method for classification or regression that leverages creation of a multitude of decision trees during training. Indeed, a single decision tree can easily overfit the training data. Random Forest overcomes this by constructing a forest of trees, each trained on a random subset of the data. Each tree makes a prediction and for regression tasks the Random Forest output is the average prediction of the different trees. This method is non-parametric, it does not assume any functional form between the covariates and the outcome. It can handle non-linear relationships, interactions between variables and high-dimensional feature spaces. 
+
+The training algorithm for random forests applies the general technique of bootstrap aggregating or bagging, to tree learners. With a training set $(X,Y)$, bagging $T$ times consist in selecting a random sample with replacement of the training set and fits trees to these samples. The samples are named $(X_t, Y_t)$ for $t = 1, ..., T$. The second step is train the regression tree $f_t$ on $X_t, Y_t$. After training, the forest aggregates over the diverse trees:
+$$\hat{f}(x) = \frac{1}{T} \sum_{t=1}^{T} f_t(x)$$
+where $f_t(x)$ is the prediction from the $t$-th tree. 
+
+We used random forests to estimate the nuisance components within the Double Machine Learning procedure, which allows to learn complex patterns in the data without over-fitting. The Double/Debiased Machine Learning (DDML) framework is presented in the next paragraph. \\
+
+Double/Debiased Machine Learning, also called de-biased machine learning, was first introduced by \cite{chernozhukov_doubledebiased_2018}. The goal is to develop a causal estimator by leveraging the flexibility of non-parametric machine learning methods. The goal of this method is also to reduce bias, provide a valid confidence interval and a 'root-n-consistent' estimator (e.g. estimator error approaches zero at a rate of $1 / \sqrt{n}$ when the sample size $n$ goes to infinity). 
+
+The goal is to isolate the causal effect of a treatment variable $D$ on an outcome $Y$ (T1D incidence) while controlling for a set of confounding variables $X$. The DML procedure relies on the \textbf{Frisch-Waugh-Lovell (FWL) theorem}, which states that in a linear model, the coefficient of a regressor $D$ in the full regression of $Y$ on $D$ and $X$ is equal to the coefficient from regressing the residuals of $Y$ (after removing the effect of $X$) on the residuals of $D$ (after removing the effect of $X$). 
+
+This motivates the three-step structure of DML:
+
+1. Estimate nuisance functions using machine learning:
+$$g_0(X) = E[Y| X] \quad \quad m_0(X) = E[D| X]$$
+2. Partialling out the confounders:
+$$\tilde{Y} = Y - g_0(X) \quad  \quad \tilde{D} = D - m_0(X)$$
+This second step removes variation associated with confounders.
+3. Estimate the causal effects with residuals:
+$$\tilde{Y} = \theta_0 \tilde{D} + \zeta$$
+The $\theta_0$ coefficient is an estimate of the causal impact of the treatment. 
+
+The estimator is orthogonal, meaning that estimation error in nuisance functions doesn't bias $\hat{\beta}$, asymptotically normal and double-robust (e.g. is consistent as long as the nuisance components are estimated consistently).  The combination of Random Forest and DML offers flexibility without increasing bias: non-parametric machine learning methods can capture complex patterns in data while DML corrects for the lack of causal interpretability. It also offers robustness because by removing the influence of confounders and using residuals, the estimator is less sensitive to model misspecification and overfitting.
+
 
 \newpage 
 
@@ -1230,6 +1519,60 @@ print(build_table(
 ))
 
 #print("\\begingroup\\center\\footnotesize\n" + build_table(MAIN_RESULTS, include_pval=True, midrule_after=30) + "\n\\endgroup")
+```
+
+\newpage 
+
+## Common Support Hypothesis (DML)
+
+For our Double ML estimates to be valid, two key conditions must be satisfied:
+ 
+1. **Common Support:** For every observed value of $X_i$ there must be a positive probability of receiving each level of the treatment variable $D$.
+2. **Correct Model Specification:** The machine learning algorithm must provide an adequate approximation of the true underlying functions 
+
+Note that, for proper causal inference, we would also need that: $Y(d) \perp  D|X$, that, conditional on $X$, treatment assignment $D$ is as good as random. 
+
+A simple and intuitive way to assess both conditions is to plot the predicted values against the observed values. If the points cluster tightly around the 45 line, this indicates both good predictive performance (suggesting appropriate model specification) and sufficient overlap in the covariate distributions across treatment groups.
+
+In our case many variables fit well this criterion, Assaults, Gyms, NO$_2$ and Fast Foods are mostly clustered around the 45 line. PM10 concentration and Share of patients with Tobacco addiction exhibit a worse fit, but in the mid region we still have a reasonable predictive accuracy. 
+
+In our case, several variables exhibit good fit based on this criterion. In particular, assaults, gyms, NO$_2$ concentration, and fast food count show predicted values that closely follow the 45 line, suggesting strong model performance and common support. In contrast, PM$_{10}$ concentration and the share of patients diagnosed with tobacco addiction has a weaker fit, particularly at the extremes. Nevertheless, in the mid-range of the predicted values, predictive accuracy remains acceptable.
+
+\newpage 
+
+```{python}
+#| fig-cap: "Double ML Residuals"
+#| fig-format: pdf
+
+residuals = pl.read_csv('results_analysis/dml-residuals.csv')
+
+# Process and merge using Polars
+df_polars = (
+    residuals
+    .filter(pl.col('desc') != 'dml-n_ape4722z')
+    .with_columns(
+        pl.col('desc').str.replace('dml-', '').alias('code')
+    )
+    .join(mapping_df, on='code', how='left')
+    .drop_nulls()
+)
+
+plot = (
+    ggplot(df_polars, aes(x='real_value', y='mean_prediction'))
+    + geom_point(size=0.4)
+    + geom_abline(intercept=0, slope=1, size = 1)
+    + facet_wrap('~description', nrow=3, scales='free')
+    + theme_minimal(base_size=12)
+    + theme(
+        legend_position='none',
+        text=element_text(family="Times New Roman"),
+        figure_size=(6, 7.5),
+        panel_spacing=.03
+    )
+    + labs(x="Real Value", y="Mean Prediction")
+)
+
+plot 
 ```
 
 \newpage 
@@ -1261,78 +1604,19 @@ print(build_table(
     ))
 ```
 
-
-\newpage 
-
-## Common Support Hypothesis (DML)
-
-For our Double ML estimates to be valid, two key conditions must be satisfied:[^condi]
- 
-1. **Common Support:** For every observed value of $X_i$ there must be a positive probability of receiving each level of the treatment variable $D$.
-2. **Correct Model Specification:** The machine learning algorithm must provide an adequate approximation of the true underlying functions 
-
-Note that, for proper causal inference, we would also need that: $Y(d) \perp  D|X$, that, conditional on $X$, treatment assignment $D$ is as good as random. 
-
-A simple and intuitive way to assess both conditions is to plot the predicted values against the observed values. If the points cluster tightly around the 45° line, this indicates both good predictive performance (suggesting appropriate model specification) and sufficient overlap in the covariate distributions across treatment groups.
-
-In our case many variables fit well this criterion, Assaults, Gyms, NO$_2$ and Fast Foods are mostly clustered arround the 45° line. PM10 concentration and Share of patients with tabacco addiction exebit a worse fit, but in the mid region we still have a reasonable predictive accuracy. 
-
-In our case, several variables exhibit good fit based on this criterion. In particular, assaults, gyms, NO$_2$ concentration, and fast food count show predicted values that closely follow the 45° line, suggesting strong model performance and common support. In contrast, PM$_{10}$ concentration and the share of patients diagnosed with tobacco addiction has a weaker fit, particularly at the extremes. Nevertheless, in the mid-range of the predicted values, predictive accuracy remains acceptable.
-
 ```{python}
-#| fig-cap: "Double ML Residuals"
+#| results: asis
+#| output: asis
+#| tbl-cap: Poisson Fixed Effects
 
-residuals = pl.read_csv('results_analysis/dml-residuals.csv')
+POISSON_FE = POISSON_FE.rename(columns={'nobs': 'N. Observations'})
 
-p = (
-    ggplot(df, aes(x='beta', y='variable', color='description'))
-      + geom_point(size=1.5)
-      + geom_errorbarh(
-          aes(xmin='conf_low', xmax='conf_high'),
-          height=0.35, size=0.95
-        )
-      + geom_vline(xintercept=0, linetype='dashed', size=1)
-      + facet_wrap('~description', ncol=1)
-      + theme_minimal(base_size=14)
-      + theme(
-          legend_position='none',
-          text=element_text(family="Times New Roman"),
-          figure_size=(6, 5),
-          panel_spacing=.03
-        )
-      + labs(x="", y="")
-)
-
-
-
-
-# Process and merge using Polars
-df_polars = (
-    residuals
-    .filter(pl.col('desc') != 'dml-n_ape4722z')
-    .with_columns(
-        pl.col('desc').str.replace('dml-', '').alias('code')
-    )
-    .join(mapping_df, on='code', how='left')
-    .drop_nulls()
-)
-
-p = (
-    ggplot(df_polars, aes(x='real_value', y='mean_prediction'))
-    + geom_point(size=0.4)
-    + geom_abline(intercept=0, slope=1, size = 1)
-    + facet_wrap('~description', nrow=3, scales='free')
-    + theme_minimal(base_size=12)
-    + theme(
-        legend_position='none',
-        text=element_text(family="Times New Roman"),
-        figure_size=(6, 7),
-        panel_spacing=.03
-    )
-    + labs(x="Real Value", y="Mean Prediction")
-
-)
-
-p
+print(build_table(
+        POISSON_FE,
+        include_pval=True,
+        midrule_after=23,
+        pattern_keep = r'Full|D$',
+        model_stat_names=['dispersion', 'N. Observations', 'pseudo_r2', 'description'], 
+        expo=False
+    ))
 ```
-

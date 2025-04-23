@@ -1,3 +1,4 @@
+#-----Import Libraries
 import pandas as pd
 import pyarrow.feather as feather
 
@@ -6,7 +7,6 @@ def import_filosofi(filename):
     df = pd.read_csv(path, dtype=str, delimiter=";")
     df.columns = df.columns.str.lower()
 
-    # compute per‑person metric from the raw strings
     df['nbpersmenfisc21'] = (
         pd.to_numeric(df['nbpersmenfisc21']
                       .astype(str)
@@ -23,7 +23,6 @@ def import_filosofi(filename):
              'tp6021', 'ppsoc21', 'ppfam21', 'd121', 'd921', 'rd21']]
     df = df.rename(columns={'nbpersmenfisc21': 'nombre_pers_menage'})
 
-    # convert every non‑geo column to numeric, safely via string
     for col in df.columns.drop('codgeo'):
         df[col] = pd.to_numeric(
             df[col].astype(str).str.replace(',', '.', regex=False),
@@ -43,7 +42,6 @@ def import_filo(year):
     path = f"data/external/insee-filosofi/FILO{year}_DEC_ARR.csv"
     df = pd.read_csv(path, dtype=str, delimiter=";")
 
-    # drop trailing two‑digit suffixes from column names
     df.columns = df.columns.str.replace(r'\d{2}$', '', regex=True)
 
     df['nombre_pers_menage'] = (
@@ -103,7 +101,7 @@ years = range(2018, 2022)
 FILO_ARR = pd.concat((import_filo(y) for y in years), ignore_index=True)
 
 
-# Write out all three levels as Feather with zstd compression
+# three levels Exports 
 feather.write_feather(FILO_ARR, "data/interim/arrondissements/filosofi.feather", compression="zstd")
 feather.write_feather(FILO_BV22, "data/interim/bv2022/filosofi.feather",         compression="zstd")
 feather.write_feather(FILO_DEP,  "data/interim/departement/filosofi.feather",     compression="zstd")
@@ -113,7 +111,7 @@ feather.write_feather(FILO_DEP,  "data/interim/departement/filosofi.feather",   
 UNEMP = pd.read_csv("data/external/insee-chomage/DS_RP_EMPLOI_LR_COMP_data.csv", dtype=str, delimiter=";")
 
 def compute_unemp(df, level, level_name):
-    # Active population (EMPSTA 1T2)
+    # Active population
     act = df[
         (df['AGE']=="Y15T64") &
         (df['EMPSTA_ENQ']=="1T2") &
@@ -123,7 +121,7 @@ def compute_unemp(df, level, level_name):
         (df['TIME_PERIOD']=="2021")
     ][['GEO','OBS_VALUE']].rename(columns={'GEO':'geo','OBS_VALUE':'active_pop'})
 
-    # Unemployed population (EMPSTA 2)
+    # Unemployed population
     un = df[
         (df['AGE']=="Y15T64") &
         (df['EMPSTA_ENQ']=="2") &
@@ -144,6 +142,6 @@ def compute_unemp(df, level, level_name):
 UNEMP_ARR  = compute_unemp(UNEMP, "ARR",    "arr24")
 UNEMP_BV22 = compute_unemp(UNEMP, "BV2022","bv2022")
 
-# Write unemployment rates to Feather
+# Export
 feather.write_feather(UNEMP_ARR,  "data/interim/arrondissements/unemployment.feather", compression="zstd")
 feather.write_feather(UNEMP_BV22, "data/interim/bv2022/unemployment.feather",         compression="zstd")

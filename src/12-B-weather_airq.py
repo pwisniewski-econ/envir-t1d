@@ -34,7 +34,7 @@ table_passage_df = pd.concat([table_passage_df, arr2com], ignore_index=True)
 geocom = gpd.read_file("data/external/communes-50m.geojson")[["code", "geometry"]]
 geocom = geocom.rename(columns={"code": "code_insee24"})
 
-# Weather Data --------------
+# Weather Data 
 weather_df = pd.read_csv(
     "data/external/mfrance-meteo/meteo_2017_2024_plus.csv"
 )
@@ -56,7 +56,7 @@ weather_geoms = (
 weather_geoms["wkt"] = weather_geoms.geometry.apply(lambda geom: geom.wkt)
 weather_geoms = weather_geoms.drop(columns="geometry")
 
-### Flatten weather and join attributes
+## Flatten weather and join attributes
 weather = weather_gdf.copy()
 weather["wkt"] = weather.geometry.apply(lambda geom: geom.wkt)
 weather = weather.drop(columns="geometry")
@@ -93,7 +93,7 @@ def sum_weather(df: pd.DataFrame, geo_level: str, time_level: str) -> pd.DataFra
     )
 
 
-## Arrondissement-level seasonal summary ---------------------------
+## ------- Arrondissement-level seasonal summary ---------
 weather["season"] = np.select(
     [weather.month.isin(["12","01","02"]),
      weather.month.isin(["03","04","05"]),
@@ -125,7 +125,7 @@ weather_arr[num_cols] = weather_arr[num_cols].interpolate(
     method="linear", axis=0, limit_direction="both"
 )
 
-## Department level monthly summary ---------------------------
+#------------ Department level monthly summary --------------
 weather23_dep = (
     weather
       .assign(dep=weather.arr24.str[:2])
@@ -172,7 +172,7 @@ weather23_dep = (
       .reset_index()
 )
 
-# Export results to Feather
+#-------- Export results to Feather ----------
 weather_arr.to_feather(
     "data/interim/arrondissements/weather.feather",
     compression="zstd"
@@ -182,7 +182,7 @@ weather23_dep.to_feather(
     compression="zstd"
 )
 
-# Air Quality Aggregation ----------------
+# --------- Air Quality Aggregation -------------
 
 table_passage_df2 = (
     pd.read_feather("results_building/t_passage.feather")
@@ -232,7 +232,7 @@ air_qual_bv22.to_feather(
 )
 
 
-# Greenhouse Gas Emissions Aggregation ----------------------
+# ---------- Greenhouse Gas Emissions Aggregation ----------------
 table_passage_df3 = (
     pd.read_feather("results_building/t_passage.feather")
     [["code_insee21", "arr24", "bv2022"]]

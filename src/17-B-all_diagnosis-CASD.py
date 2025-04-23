@@ -1,8 +1,11 @@
 import polars as pl
 
+#---- Diagnostics reading  ----
 sources = [("das23_ano.feather", "diag"),
            ("rsa23_ano.feather", "dp"),
            ("rsa23_ano.feather", "dr")]
+
+# ---- Selection and Export ----
 
 all_diag = pl.concat([
     pl.read_ipc(f"data/interim/{fn}")

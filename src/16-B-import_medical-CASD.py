@@ -1,6 +1,8 @@
+#------Import Libraries -----
 import polars as pl
 import gc
 
+#---- Import/Export function ----
 def import_write(file: str) -> None:
     import_path = f"data/pmsi/{file}.csv"
     export_path = f"data/interim/{file}.feather"
@@ -8,6 +10,7 @@ def import_write(file: str) -> None:
     df.write_ipc(export_path, compression="zstd")
     gc.collect()
 
+#---- files to be imported ----
 files = ["act23", "ano23", "das23", "pgv23", "rdth23", "rsa23", "rum23"]
 
 for f in files[:5]:

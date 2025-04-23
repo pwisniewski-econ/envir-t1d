@@ -1,6 +1,7 @@
+# Import libraries
 import pandas as pd
 
-# Read equipment CSV and standardize column names
+# Read equipment 
 equip = pd.read_csv(
     "data/external/insee-equipement/DS_BPE_data.csv",
     sep=";",
@@ -8,14 +9,14 @@ equip = pd.read_csv(
 )
 equip.columns = equip.columns.str.lower()
 
-# Read passage table, select relevant columns, drop duplicates
+# Read passage table,
 table_passage_df = (
     pd.read_feather("results_building/t_passage.feather")
     [["code_insee24", "arr24", "bv2022"]]
     .drop_duplicates()
 )
 
-# Filter to communes (COM), join with passage table, and select/rename columns
+
 equip = (
     equip[equip["geo_object"] == "COM"]
     .merge(
@@ -32,10 +33,6 @@ equip = (
 equip["obs_value"] = pd.to_numeric(equip["obs_value"], errors="coerce")
 
 def equip_group(df: pd.DataFrame, var_group: str, level: str) -> pd.DataFrame:
-    """
-    Group by `var_group` and `level`, sum obs_value, and pivot to wide format.
-    Each category becomes a column named 'n_equip_<lowercase level>'.
-    """
     df2 = df.copy()
     # Create category column
     df2["cat"] = "n_equip_" + df2[level].str.lower()
@@ -55,14 +52,14 @@ def equip_group(df: pd.DataFrame, var_group: str, level: str) -> pd.DataFrame:
     )
     return wide
 
-# Apply to arrondissements, filtering short codes
+# Apply arr
 equip_arr = equip_group(equip, "arr24", "facility_sdom")
 equip_arr = equip_arr[equip_arr["arr24"].str.len() < 4]
 
-# Apply to bureau vote 2022
+# Apply bv22
 equip_bv22 = equip_group(equip, "bv2022", "facility_sdom")
 
-# Write outputs to Feather with zstd compression
+# Export
 equip_arr.to_feather(
     "data/interim/arrondissements/equipement.feather",
     compression="zstd"

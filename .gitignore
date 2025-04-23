@@ -52,4 +52,4 @@ rsconnect/
 !data/README.MD
 data/*
 *.parquet
-report.pdf
+!report.pdf
